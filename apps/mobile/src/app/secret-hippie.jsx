@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/utils/auth';
 import { theme } from '@/utils/theme';
 import { useRouter } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { Sparkles, Palette, CheckCircle2, Lock } from 'lucide-react-native';
 import HippieBackground from '@/components/HippieBackground';
 
@@ -121,7 +122,7 @@ import HippieBackground from '@/components/HippieBackground';
           </View>
         )}
 
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => goBack(router)}>
           <Text style={styles.closeButtonText}>Close</Text>
         </TouchableOpacity>
       </View>

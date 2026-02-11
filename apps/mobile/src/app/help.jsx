@@ -17,6 +17,7 @@ import Markdown from 'react-native-markdown-display';
 import { useTheme } from "@/utils/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocationStore } from '@/utils/locationStore';
+import { goBack } from '@/utils/navigation';
 
 export default function HelpContact() {
   const { theme, isHippie, isLight } = useTheme();
@@ -426,7 +427,7 @@ export default function HelpContact() {
           "Account Required",
           "Please sign in to chat with Towny.",
           [
-            { text: "Cancel", style: "cancel", onPress: () => router.back() },
+            { text: "Cancel", style: "cancel", onPress: () => goBack(router) },
             { text: "Sign In", onPress: () => router.replace("/auth?mode=login") },
           ]
         );
@@ -894,7 +895,7 @@ export default function HelpContact() {
       )}
       <View style={{ paddingTop: insets.top, flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
             <ChevronLeft color={theme.colors.text} size={28} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>

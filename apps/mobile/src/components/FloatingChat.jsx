@@ -7,7 +7,7 @@ import {
   Animated, 
   Dimensions, 
   TextInput, 
-
+  PanResponder,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -120,6 +120,21 @@ const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const bubblePos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const isDragging = useRef(false);
+  const bubblePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5,
+      onPanResponderGrant: () => { isDragging.current = true; },
+      onPanResponderMove: Animated.event([null, { dx: bubblePos.x, dy: bubblePos.y }], { useNativeDriver: false }),
+      onPanResponderRelease: (_, g) => {
+        bubblePos.flattenOffset();
+        bubblePos.extractOffset();
+        setTimeout(() => { isDragging.current = false; }, 50);
+      },
+    })
+  ).current;
   const [onlineUsers, setOnlineUsers] = useState({});
   const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
@@ -2516,9 +2531,12 @@ useEffect(() => {
     <View style={[styles.container, isOpen && styles.containerOpen, isOpen && Platform.OS === 'web' && { left: (typeof window !== 'undefined' && window.innerWidth >= 768) ? 72 : 0 }, !isOpen && styles.containerClosed]} pointerEvents="box-none">
         <FullscreenMediaModal />
         {!isOpen && isVisible && (
-          <View style={styles.fixedBubbleContainer}>
+          <Animated.View 
+            style={[styles.fixedBubbleContainer, { transform: bubblePos.getTranslateTransform() }]}
+            {...bubblePanResponder.panHandlers}
+          >
             <View style={styles.bubbleContainer}>
-              <TouchableOpacity onPress={toggleChat} activeOpacity={0.8}>
+              <TouchableOpacity onPress={() => { if (!isDragging.current) toggleChat(); }} activeOpacity={0.8}>
                 <View style={[styles.bubble, hasUnread && styles.bubbleUnread]}>
                   <MessageCircle color="#FFF" size={24} />
                 </View>
@@ -2530,6 +2548,7 @@ useEffect(() => {
               )}
             <TouchableOpacity 
               onPress={() => {
+                if (isDragging.current) return;
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setIsVisible(false);
               }} 
@@ -2538,7 +2557,7 @@ useEffect(() => {
               <X size={12} color="#FFF" />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       )}
 
               {activeCall?.id && (activeCall.status === 'ringing' || activeCall.status === 'active') && (

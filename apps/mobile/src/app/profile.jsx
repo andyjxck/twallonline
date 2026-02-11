@@ -53,6 +53,7 @@ import * as Haptics from "expo-haptics";
   import { ShareManager } from "../components/ShareManager";
   import { theme } from "../utils/theme";
   import { useTheme } from "@/utils/ThemeContext";
+import { goBack } from "@/utils/navigation";
   import { sendFriendRequestNotification, sendFriendAcceptedNotification } from "../utils/notifications";
   import { getSavedProfiles, saveProfile, removeProfile } from "../utils/savedProfiles";
   import { useAuth, useAuthStore, useChatStore } from "../utils/auth";
@@ -236,7 +237,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
           // Prevent viewing other anon profiles
           if (userData && !userData.password && !viewingOwnProfile) {
             Alert.alert("Private Profile", "Anonymous profiles are private and cannot be visited.");
-            router.back();
+            goBack(router);
             return;
           }
 
@@ -807,7 +808,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       return (
         <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
           <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.headerIcon}>
+            <TouchableOpacity onPress={() => goBack(router)} style={styles.headerIcon}>
               <ChevronLeft color={theme.colors.text} size={28} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Profile</Text>
@@ -827,7 +828,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     return (
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerIcon}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.headerIcon}>
           <ChevronLeft color={theme.colors.text} size={28} />
         </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Profile</Text>

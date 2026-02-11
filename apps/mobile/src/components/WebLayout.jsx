@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { 
   MessageCircle, User, Star, Briefcase, Vote, Sparkles, 
   Settings, Globe, Smartphone, X, Apple, Mail, CheckCircle,
-  Menu, ChevronDown, Shield
+  Menu, ChevronDown, ChevronUp, Shield
 } from 'lucide-react-native';
 import { useChatStore, useAuthStore } from '../utils/auth';
 import { useTheme } from '../utils/ThemeContext';
@@ -99,6 +99,7 @@ export default function WebLayout({ children }) {
     { icon: Briefcase, label: 'Business', onPress: () => navigate('/businesses') },
     { icon: User, label: 'Profile', onPress: () => navigate('/profile') },
     { icon: Sparkles, label: 'Towny', onPress: () => navigate('/help'), color: '#FBBF24' },
+    ...(isAdmin ? [{ icon: Shield, label: 'Admin', onPress: () => navigate('/admin'), color: '#EF4444' }] : []),
   ];
 
   // ─── MOBILE WEB ───
@@ -109,14 +110,14 @@ export default function WebLayout({ children }) {
           {children}
         </View>
 
-        {/* Collapsed: small floating handle */}
+        {/* Collapsed: semicircle up-arrow tab at bottom center */}
         {!mobileNavOpen && (
           <TouchableOpacity
             onPress={() => setMobileNavOpen(true)}
             activeOpacity={0.8}
             style={styles.mobileHandle}
           >
-            <Menu size={20} color="rgba(255,255,255,0.7)" />
+            <ChevronUp size={18} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
         )}
 
@@ -146,14 +147,14 @@ export default function WebLayout({ children }) {
       {/* Floating Dock */}
       <View style={styles.dock}>
         <View style={styles.dockInner}>
-          {/* Logo */}
-          <View style={styles.dockLogoWrap}>
+          {/* Logo — click to go to Town Wall profile */}
+          <TouchableOpacity onPress={() => navigate('/profile')} activeOpacity={0.8} style={styles.dockLogoWrap}>
             <Image 
               source={require("../../assets/images/icon.png")} 
               style={styles.dockLogo} 
               contentFit="contain" 
             />
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.dockDivider} />
 
@@ -366,24 +367,29 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // ─── Mobile Handle (collapsed) ───
+  // ─── Mobile Handle (collapsed) — semicircle tab ───
   mobileHandle: {
     position: 'fixed',
-    bottom: 20,
-    right: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    bottom: 0,
+    left: '50%',
+    transform: [{ translateX: -32 }],
+    width: 64,
+    height: 28,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     backgroundColor: 'rgba(30,30,40,0.92)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderBottomWidth: 0,
+    borderColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 
   // ─── Mobile Pill (expanded) ───

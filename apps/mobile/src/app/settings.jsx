@@ -7,6 +7,7 @@ import { ChevronLeft, LogOut, Shield, Info, Bell, Key, BarChart2, ChevronRight, 
 import { scheduleAccountDeletion } from "../utils/user";
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
+import { goBack } from "@/utils/navigation";
 import { useAuth } from "../utils/auth/useAuth";
 import { useAuthStore } from "../utils/auth";
 import * as Haptics from "expo-haptics";
@@ -338,7 +339,7 @@ const handleSignOut = async () => {
 
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.backBtn}>
           <ChevronLeft size={28} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Settings</Text>

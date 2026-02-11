@@ -13,7 +13,8 @@ import {
   ScrollView,
 } from "react-native";
 import { Image } from "expo-image";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { supabase } from "../utils/supabase";
 import { useAuthStore } from "../utils/auth";
 import { useLocationStore } from "../utils/locationStore";
@@ -401,7 +402,7 @@ export default function Auth() {
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity 
-          onPress={() => router.back()}
+          onPress={() => goBack(router)}
           style={styles.backButton}
         >
           <ChevronLeft color="#FFFFFF" size={28} />

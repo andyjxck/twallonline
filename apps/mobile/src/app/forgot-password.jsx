@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { ChevronLeft, User, Key } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import bcrypt from 'bcryptjs';
@@ -89,7 +90,7 @@ export default function ForgotPassword() {
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack(router)}
           style={styles.backButton}
         >
           <ChevronLeft color="#FFFFFF" size={28} />
@@ -143,7 +144,7 @@ export default function ForgotPassword() {
 
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => router.back()}
+              onPress={() => goBack(router)}
             >
               <Text style={styles.secondaryButtonText}>Back to Sign In</Text>
             </TouchableOpacity>

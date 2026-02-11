@@ -13,6 +13,7 @@ import { decode } from 'base64-arraybuffer';
 import * as ImagePicker from 'expo-image-picker';
 import { getStoredUser } from '@/utils/user';
 import { useLocationStore } from "@/utils/locationStore";
+import { goBack } from "@/utils/navigation";
 
 export default function LocalTalent() {
   const { theme, isHippie, isLight } = useTheme();
@@ -653,7 +654,7 @@ const { error } = await supabase
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={{ paddingTop: insets.top, flex: 1 }}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
                 <ChevronLeft color={theme.colors.text} size={24} strokeWidth={2} />
               </TouchableOpacity>
               <Text style={dynamicStyles.headerTitle}>LOCAL TALENT</Text>

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/utils/ThemeContext";
+import { goBack } from "@/utils/navigation";
 import { LinearGradient } from "expo-linear-gradient";
 import { 
   ChevronLeft, 
@@ -97,7 +98,7 @@ export default function GuideScreen() {
       <StatusBar style={isLight ? "dark" : "light"} />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.backBtn}>
           <ChevronLeft size={28} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>How to Use Town Wall</Text>

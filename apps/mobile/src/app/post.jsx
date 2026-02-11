@@ -14,6 +14,7 @@ import {
   } from "react-native";
   import { useSafeAreaInsets } from "react-native-safe-area-context";
   import { useRouter, useLocalSearchParams } from "expo-router";
+  import { goBack } from "@/utils/navigation";
   import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera } from "lucide-react-native";
 
 import { getStoredUser } from "../utils/user";
@@ -583,7 +584,7 @@ export default function PostScreen() {
       style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}
     >
       <View style={[styles.header, { paddingTop: insets.top + 10, borderBottomColor: isHippie ? 'rgba(255,255,255,0.1)' : theme.colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.closeBtn}>
           <X size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>

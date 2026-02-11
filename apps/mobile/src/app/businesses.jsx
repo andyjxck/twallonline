@@ -16,6 +16,7 @@ import { useTheme } from "@/utils/ThemeContext";
 
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { useLocationStore } from "@/utils/locationStore";
+import { goBack } from "@/utils/navigation";
 
 const DELIVERY_PLATFORMS = [
   { id: 'amazon', name: 'Amazon', icon: ShoppingBag },
@@ -913,7 +914,7 @@ if (user?.id) {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={{ paddingTop: insets.top, flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
             <ChevronLeft color={theme.colors.text} size={24} strokeWidth={2} />
           </TouchableOpacity>
           <Text style={dynamicStyles.headerTitle}>LOCAL BIZ</Text>

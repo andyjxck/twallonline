@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { 
   ChevronLeft, 
   BarChart2, 
@@ -443,7 +444,7 @@ const { data: poll, error: pollError } = await supabase
         {!isHippie && <LinearGradient colors={['#0F172A', '#000000', '#000000']} style={StyleSheet.absoluteFill} />}
         <View style={{ paddingTop: insets.top, flex: 1 }}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
                 <ChevronLeft color="#FFFFFF" size={28} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>POLLS & FEATURES</Text>

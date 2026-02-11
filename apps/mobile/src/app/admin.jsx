@@ -44,6 +44,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/utils/supabase';
 import { getStoredUser } from '@/utils/user';
+import { goBack } from '@/utils/navigation';
 import { sendNotification, notifyStaffOfAdminAction } from '@/utils/notifications';
 import { useTheme } from "@/utils/ThemeContext";
 import { getBlockLogs } from '@/utils/blocking';
@@ -170,7 +171,7 @@ export default function ModerationAdmin() {
       
       if (!userData?.is_admin && !userData?.is_moderator) {
         Alert.alert("Access Denied", "You do not have permission to view this page.");
-        router.back();
+        goBack(router);
         return;
       }
       
@@ -2157,7 +2158,7 @@ export default function ModerationAdmin() {
         style={{ paddingTop: insets.top, flex: 1 }}
       >
 <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
               <ChevronLeft color={theme.colors.text} size={28} />
             </TouchableOpacity>
             <Text style={dynamicStyles.headerTitle}>{isSuperAdmin ? 'SUPER ADMIN' : 'MODERATION'}</Text>

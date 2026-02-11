@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/utils/theme';
+import { goBack } from '@/utils/navigation';
 import { useTheme } from "@/utils/ThemeContext";
 
 export default function TermsOfService() {
@@ -14,7 +15,7 @@ export default function TermsOfService() {
   return (
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.backBtn}>
           <ChevronLeft size={28} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Terms of Service</Text>
