@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Linking, Modal, TextInput } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { 
   MessageCircle, User, Star, Briefcase, Vote, Sparkles, 
   Settings, Globe, Smartphone, X, Apple, Mail, CheckCircle
@@ -12,15 +12,19 @@ import { Image } from 'expo-image';
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/pDXYmMhf';
 
 export default function WebLayout({ children }) {
-  if (Platform.OS !== 'web') return children;
-
   const router = useRouter();
+  const pathname = usePathname();
   const { theme } = useTheme();
   const auth = useAuthStore(state => state.auth);
   const [showGetApp, setShowGetApp] = useState(false);
   const [androidEmail, setAndroidEmail] = useState('');
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  if (Platform.OS !== 'web') return children;
+
+  const hideSidebar = pathname?.startsWith('/onboarding') || pathname === '/auth' || pathname === '/forgot-password';
+  if (hideSidebar) return <View style={{ flex: 1 }}>{children}</View>;
 
   const handleAndroidSignup = async () => {
     if (!androidEmail || !androidEmail.includes('@')) return;
