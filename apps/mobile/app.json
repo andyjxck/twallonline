@@ -1,0 +1,155 @@
+{
+  "expo": {
+    "name": "Town Wall",
+    "slug": "townwall",
+    "version": "1.0.0",
+    "scheme": "townwall",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.andysocial.townwall",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": [
+          "tel",
+          "telprompt",
+          "mailto",
+          "itms-apps",
+          "https",
+          "http"
+        ],
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera for video calls and taking photos for posts, business listings, or your profile.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone for voice and video calls, and voice messages in chat.",
+        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to access your location to find your local city and show nearby businesses and talent.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to access your location to find your local city and show nearby businesses and talent.",
+                "UIBackgroundModes": [
+          "audio",
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACTIVITY_RECOGNITION"
+      ],
+        "package": "com.andysocial.townwall",
+        "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "./plugins/withNonModularHeaders",
+      "@config-plugins/react-native-webrtc",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera for video calls and taking photos."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to access your location to find your local city and show nearby businesses and talent."
+        }
+      ],
+            [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos"
+        }
+      ],
+      [
+        "expo-router",
+        {
+          "sitemap": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-av",
+        [
+          "expo-build-properties",
+          {
+            "android": {
+            },
+            "ios": {
+              "useFrameworks": "static"
+            }
+          }
+        ],
+      "./plugins/withAgoraFix",
+      "expo-font",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff",
+          "sounds": [
+            "./assets/sounds/alert.mp3",
+            "./assets/sounds/message.mp3",
+            "./assets/sounds/ringtone.mp3"
+          ]
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1505977777207758~8575965688",
+          "iosAppId": "ca-app-pub-1505977777207758~6195707754"
+        }
+      ],
+          [
+            "expo-tracking-transparency",
+            {
+              "userTrackingUsageDescription": "This information is used to show relevant ads and to understand how users interact with Town Wall so we can improve features and performance."
+            }
+      ],
+      "expo-asset"
+    ],
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true,
+      "srcDir": "src"
+    },
+    "extra": {
+      "router": {
+        "origin": false,
+        "sitemap": false
+      },
+      "eas": {
+        "projectId": "3d185e44-e9e3-4196-9dc9-a45a2fdff729"
+      }
+    },
+    "runtimeVersion": "1.0.0",
+    "owner": "andyjxck"
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-1505977777207758~8575965688",
+    "ios_app_id": "ca-app-pub-1505977777207758~6195707754"
+  }
+}

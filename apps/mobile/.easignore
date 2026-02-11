@@ -1,0 +1,33 @@
+# Dependencies - EAS installs these on the build server
+node_modules/
+
+# Native build directories - EAS runs expo prebuild
+ios/
+android/
+
+# Git history
+.git/
+
+# Caches and temp files
+caches/
+.expo/
+.metro-virtual/
+.orchids/
+
+# Lock files (bun.lock is large, package-lock.json too - EAS uses package.json)
+bun.lock
+yarn.lock
+
+# Large documentation files not needed for build
+COMPLETE_APP_DOCUMENTATION.md
+STRESS_TEST_CHECKLIST.md
+APP_STORE_REVIEW_NOTES.md
+
+# Editor and OS files
+.DS_Store
+.vscode/
+
+# Misc
+__tests__/
+fontawesome.css
+metro.config copy.js

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "638063618646",
+    "project_id": "town-wall-5e64c",
+    "storage_bucket": "town-wall-5e64c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:638063618646:android:ef4ae1e41dfa9647a7e9f7",
+        "android_client_info": {
+          "package_name": "com.andysocial.townwall"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDM9k7JkX-bAyU6QpJLQYH7jSu5M1Baai0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
