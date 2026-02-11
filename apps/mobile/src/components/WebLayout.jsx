@@ -81,8 +81,8 @@ export default function WebLayout({ children }) {
     { icon: Globe, label: 'Feed', onPress: () => navigate('/') },
     { icon: Star, label: 'Talent', onPress: () => navigate('/talent') },
     { icon: Briefcase, label: 'Business', onPress: () => navigate('/businesses') },
+    { icon: User, label: 'Profile', onPress: () => navigate('/profile') },
     { icon: Sparkles, label: 'Towny', onPress: () => navigate('/help'), color: '#FBBF24' },
-    { icon: Settings, label: 'More', onPress: () => navigate('/settings') },
   ];
 
   if (isMobileWeb) {
