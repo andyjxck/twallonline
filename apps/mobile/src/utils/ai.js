@@ -88,6 +88,71 @@ export async function moderateContent(text) {
   }
 }
 
+const CHAT_MODERATION_PROMPT = `You are a safety classifier for a private AI chat inside a community app called Town Wall.
+
+Classify the user's message into one of these risk levels:
+
+HIGH RISK (report immediately):
+- Threats of violence, self-harm, or harm to others
+- Child safety concerns (CSAM, grooming, predatory behavior)
+- Terrorism, extremism, or radicalization
+- Sharing personal info of others (doxxing)
+- Illegal activity planning (drug deals, fraud, etc.)
+
+MEDIUM RISK (flag for review):
+- Persistent harassment or hate speech directed at real people
+- Attempts to extract harmful information from the AI
+- Sexually explicit content involving minors (even fictional)
+
+LOW RISK (no action):
+- Normal conversation, jokes, roleplay, creative writing
+- Mild profanity or edgy humor
+- Venting frustration (non-threatening)
+- NSFW language between consenting adults in private chat
+- General questions, even controversial ones
+
+IMPORTANT: This is a PRIVATE chat with an AI. Be lenient. Only flag genuinely dangerous content.
+Most messages are LOW risk. Do NOT over-flag.
+
+Respond with JSON only: {"risk":"high"|"medium"|"low","reason":"brief reason","category":"threat|csam|terrorism|doxxing|illegal|harassment|exploitation|none"}`;
+
+export async function moderateChatMessage(text) {
+  if (!text?.trim()) return { risk: 'low', reason: '', category: 'none' };
+
+  if (Platform.OS === 'web') {
+    try {
+      return await callAIProxy({ action: 'moderate', systemPrompt: CHAT_MODERATION_PROMPT, text: `Classify this private AI chat message:\n\n${text}` });
+    } catch (err) {
+      console.error('Chat moderation proxy error:', err);
+      return { risk: 'low', reason: '', category: 'none' };
+    }
+  }
+
+  const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+  if (!apiKey) return { risk: 'low', reason: '', category: 'none' };
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0,
+        messages: [
+          { role: 'system', content: CHAT_MODERATION_PROMPT },
+          { role: 'user', content: `Classify this private AI chat message:\n\n${text}` }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+    const data = await response.json();
+    const result = JSON.parse(data.choices[0].message.content);
+    return { risk: result.risk || 'low', reason: result.reason || '', category: result.category || 'none' };
+  } catch (err) {
+    console.error('Chat moderation error:', err);
+    return { risk: 'low', reason: '', category: 'none' };
+  }
+}
+
 const TOWNY_PROMPT = `You are Towny, the in-app support assistant for Town Wall.
 
 THIS IS HELP MODE.

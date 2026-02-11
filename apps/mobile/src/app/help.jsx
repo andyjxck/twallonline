@@ -7,7 +7,8 @@ import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { supabase } from '@/utils/supabase';
 import { getStoredUser } from '@/utils/user';
-import { getAIAssistantResponse, generateImage, expandImage } from '@/utils/ai';
+import { getAIAssistantResponse, generateImage, expandImage, moderateChatMessage } from '@/utils/ai';
+import { encryptMessage, decryptMessage, isEncrypted } from '@/utils/chatEncryption';
 import { sendNotification } from '@/utils/notifications';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
@@ -311,15 +312,21 @@ export default function HelpContact() {
   const sanitizeMsg = (m) => {
     if (!m) return m;
     try {
+      let content = typeof m.content === 'string' ? m.content : String(m.content || '');
+      const wasEncrypted = isEncrypted(content);
+      if (wasEncrypted && currentUser?.id) {
+        content = decryptMessage(content, currentUser.id);
+      }
       return JSON.parse(JSON.stringify({
         id: m.id,
         sender_id: m.sender_id,
         receiver_id: m.receiver_id,
-        content: typeof m.content === 'string' ? m.content : String(m.content || ''),
+        content,
         is_from_admin: !!m.is_from_admin,
         created_at: m.created_at || new Date().toISOString(),
         status: m.status || null,
         resolved_at: m.resolved_at || null,
+        _encrypted: wasEncrypted,
       }));
     } catch (e) {
       console.error('sanitizeMsg failed:', e);
@@ -332,6 +339,7 @@ export default function HelpContact() {
         created_at: new Date().toISOString(),
         status: null,
         resolved_at: null,
+        _encrypted: false,
       };
     }
   };
@@ -572,6 +580,8 @@ export default function HelpContact() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const tempId = Date.now();
+    const isChatMode = townyMode === 'chat';
+
     const tempMsg = {
       id: tempId,
       sender_id: currentUser.id,
@@ -596,12 +606,19 @@ export default function HelpContact() {
 
     try {
       setIsTyping(true);
+
+      // In chat mode: encrypt the message content before storing
+      const storedContent = isChatMode ? encryptMessage(text, currentUser.id) : text;
+      // Tag chat-mode messages with status 'chat' so admin can filter them out
+      const msgStatus = isChatMode ? 'chat' : undefined;
+
       const { data: realMsg, error } = await supabase
         .from('rhelp_messages')
         .insert({
           sender_id: currentUser.id,
-          content: text,
-          is_from_admin: false
+          content: storedContent,
+          is_from_admin: false,
+          ...(msgStatus ? { status: msgStatus } : {})
         })
         .select()
         .single();
@@ -611,6 +628,50 @@ export default function HelpContact() {
       if (realMsg) {
         const cleanReal = sanitizeMsg(realMsg);
         setMessages(prev => prev.map(m => m.id === tempId ? cleanReal : m));
+      }
+
+      // AI self-moderation for chat mode — run in background, don't block the response
+      if (isChatMode) {
+        moderateChatMessage(text).then(async (modResult) => {
+          if (modResult.risk === 'high' || modResult.risk === 'medium') {
+            // Store a plaintext report for moderators
+            try {
+              await supabase.from('rmoderation_logs').insert({
+                moderator_id: null,
+                target_id: currentUser.id,
+                target_type: 'towny_chat',
+                action: `ai_flag_${modResult.risk}`,
+                reason: `[AI Auto-Flag] Category: ${modResult.category}. Reason: ${modResult.reason}. Decrypted message: ${text}`,
+              });
+            } catch (logErr) {
+              console.warn('Failed to log moderation report:', logErr);
+            }
+
+            // Notify the user via Towny
+            const warningLevel = modResult.risk === 'high' ? 'high-risk' : 'flagged';
+            const warningMsg = modResult.risk === 'high'
+              ? `⚠️ **Safety Notice** — Your last message has been flagged as ${warningLevel} and reported to our moderation team. Because this was flagged, your message was decrypted and is now visible to moderators. Category: ${modResult.category}. Please review our community guidelines.`
+              : `⚠️ **Notice** — Your last message has been flagged for review. It has been decrypted for our moderation team. Category: ${modResult.category}. If this was a mistake, no action will be taken.`;
+
+            await supabase.from('rhelp_messages').insert({
+              receiver_id: currentUser.id,
+              content: warningMsg,
+              is_from_admin: true,
+              status: isChatMode ? 'chat' : undefined,
+            });
+
+            // Send push notification
+            try {
+              await sendNotification({
+                userId: currentUser.id,
+                title: 'Towny Safety Alert',
+                body: `Your message was flagged as ${warningLevel}. It has been decrypted for moderator review.`,
+              });
+            } catch (notifErr) {
+              console.warn('Failed to send moderation notification:', notifErr);
+            }
+          }
+        }).catch(err => console.warn('Chat moderation error (non-blocking):', err));
       }
 
       const humanRequestPatterns = [/human/i, /real person/i, /person/i, /talk to someone/i, /agent/i, /staff/i, /admin/i];
@@ -668,13 +729,17 @@ export default function HelpContact() {
       let messageContent = aiResponse.text;
       const imagePrompt = aiResponse.imagePrompt;
 
+      // In chat mode: encrypt AI responses too
+      const storedAiContent = isChatMode ? encryptMessage(messageContent, currentUser.id) : messageContent;
+
       // Insert text response immediately
       const { data: aiMsg, error: aiError } = await supabase
         .from('rhelp_messages')
         .insert({
           receiver_id: currentUser.id,
-          content: messageContent,
-          is_from_admin: true
+          content: storedAiContent,
+          is_from_admin: true,
+          ...(isChatMode ? { status: 'chat' } : {})
         })
         .select()
         .single();
@@ -688,14 +753,15 @@ export default function HelpContact() {
       if (imagePrompt && aiMsg) {
         generateImage(imagePrompt).then(async (imageUrl) => {
           if (imageUrl) {
-            const updatedContent = `${messageContent}\n[TOWNY_IMAGE:${imageUrl}]`;
+            const updatedPlain = `${messageContent}\n[TOWNY_IMAGE:${imageUrl}]`;
+            const updatedStored = isChatMode ? encryptMessage(updatedPlain, currentUser.id) : updatedPlain;
             const { error: updateError } = await supabase
               .from('rhelp_messages')
-              .update({ content: updatedContent })
+              .update({ content: updatedStored })
               .eq('id', aiMsg.id);
             
             if (!updateError) {
-              setMessages(prev => prev.map(m => m.id === aiMsg.id ? sanitizeMsg({ ...m, content: updatedContent }) : m));
+              setMessages(prev => prev.map(m => m.id === aiMsg.id ? sanitizeMsg({ ...m, content: updatedStored }) : m));
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
           }

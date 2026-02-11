@@ -228,6 +228,7 @@ export default function ModerationAdmin() {
         const { data: help, error } = await supabase
           .from('rhelp_messages')
           .select(`*, rusers!rhelp_messages_sender_id_fkey(username)`)
+          .neq('status', 'chat')
           .order('created_at', { ascending: false });
         if (error) throw error;
         
@@ -405,7 +406,7 @@ export default function ModerationAdmin() {
                 supabase.from('rposts').select('id, text, user_id, created_at, rusers(username, emoji_icon)').eq('moderation_status', 'approved').eq('is_deleted', false).order('created_at', { ascending: false }).limit(10),
                 supabase.from('rusers').select('id, username, emoji_icon, created_at, is_verified').order('created_at', { ascending: false }).limit(10),
                 supabase.from('rcomments').select('id, text, user_id, post_id, created_at, rusers(username)').order('created_at', { ascending: false }).limit(10),
-                supabase.from('rhelp_messages').select('id', { count: 'exact', head: true }),
+                supabase.from('rhelp_messages').select('id', { count: 'exact', head: true }).neq('status', 'chat'),
                 supabase.from('rreports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
                 supabase.from('rposts').select('zone_id, rzones(name)').eq('moderation_status', 'approved'),
                 supabase.from('rposts').select('created_at').eq('moderation_status', 'approved').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
@@ -1463,6 +1464,7 @@ export default function ModerationAdmin() {
         .from('rhelp_messages')
         .select('*')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .neq('status', 'chat')
         .order('created_at', { ascending: true });
       if (error) throw error;
       setTranscripts(prev => ({ ...prev, [userId]: messages }));
