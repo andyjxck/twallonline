@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -28,8 +28,10 @@ export default function WelcomeScreen() {
       )}
       <StatusBar style="light" />
 
-      <View
-        style={{ flex: 1, paddingTop: insets.top + 60, paddingHorizontal: 24 }}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + 60, paddingHorizontal: 24 }}
+        showsVerticalScrollIndicator={false}
       >
         {/* Title */}
         <View style={{ marginBottom: 60 }}>
@@ -177,7 +179,7 @@ export default function WelcomeScreen() {
               By continuing, you agree to our community guidelines
             </Text>
           </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

@@ -2513,7 +2513,7 @@ useEffect(() => {
   };
 
   return (
-    <View style={[styles.container, isOpen && styles.containerOpen, !isOpen && styles.containerClosed]} pointerEvents="box-none">
+    <View style={[styles.container, isOpen && styles.containerOpen, isOpen && Platform.OS === 'web' && { left: (typeof window !== 'undefined' && window.innerWidth >= 768) ? 240 : 0 }, !isOpen && styles.containerClosed]} pointerEvents="box-none">
         <FullscreenMediaModal />
         {!isOpen && isVisible && (
           <View style={styles.fixedBubbleContainer}>
@@ -3794,7 +3794,6 @@ const styles = StyleSheet.create({
     zIndex: 9999,
     ...(Platform.OS === 'web' ? {
       position: 'fixed',
-      left: 240,
     } : {}),
   },
   containerClosed: {

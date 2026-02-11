@@ -88,16 +88,18 @@ export default function WebLayout({ children }) {
   if (isMobileWeb) {
     return (
       <View style={styles.root}>
-        <View style={[styles.mainContent, { backgroundColor: theme.colors.background, paddingBottom: 60 }]}>
+        <View style={[styles.mainContent, { backgroundColor: theme.colors.background, paddingBottom: 80 }]}>
           {children}
         </View>
-        <View style={[styles.bottomNav, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
-          {mobileNavItems.map((item, i) => (
-            <TouchableOpacity key={i} onPress={item.onPress} style={styles.bottomNavItem} activeOpacity={0.7}>
-              <item.icon size={20} color={item.color || theme.colors.textSecondary} />
-              <Text style={[styles.bottomNavLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.pillWrapper}>
+          <View style={[styles.pillNav, { backgroundColor: 'rgba(30,30,40,0.92)', borderColor: 'rgba(255,255,255,0.08)' }]}> 
+            {mobileNavItems.map((item, i) => (
+              <TouchableOpacity key={i} onPress={item.onPress} style={styles.pillNavItem} activeOpacity={0.7}>
+                <item.icon size={20} color={item.color || 'rgba(255,255,255,0.6)'} />
+                <Text style={[styles.pillNavLabel, { color: 'rgba(255,255,255,0.6)' }]}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </View>
     );
@@ -299,28 +301,40 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
-  bottomNav: {
+  pillWrapper: {
     position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    height: 60,
-    borderTopWidth: 1,
+    bottom: 16,
+    left: 16,
+    right: 16,
     alignItems: 'center',
-    justifyContent: 'space-around',
     zIndex: 9999,
   },
-  bottomNavItem: {
+  pillNav: {
+    flexDirection: 'row',
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+    maxWidth: 400,
+    width: '100%',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+  },
+  pillNavItem: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingVertical: 6,
     flex: 1,
   },
-  bottomNavLabel: {
-    fontSize: 10,
+  pillNavLabel: {
+    fontSize: 9,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   modalOverlay: {
     position: 'fixed',

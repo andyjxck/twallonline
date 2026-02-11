@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -26,18 +26,13 @@ export default function UkCheckScreen() {
 
   const handleNo = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const globalCity = await findCityByName('Global');
-    if (globalCity) {
-      setCity({
-        id: globalCity.id,
-        name: globalCity.name,
-        source: "manual",
-      });
-      await setOnboardingComplete(true);
-      router.replace("/");
-      return;
-    }
-    router.push("/onboarding/city?global=true");
+    setCity({
+      id: 321,
+      name: "Global",
+      source: "manual",
+    });
+    await setOnboardingComplete(true);
+    router.replace("/");
   };
 
   return (
@@ -50,8 +45,10 @@ export default function UkCheckScreen() {
       )}
       <StatusBar style={isLight ? "dark" : "light"} />
 
-      <View
-        style={{ flex: 1, paddingTop: insets.top + 80, paddingHorizontal: 24 }}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + 80, paddingHorizontal: 24 }}
+        showsVerticalScrollIndicator={false}
       >
         <View style={{ alignItems: "center", marginBottom: 60 }}>
           <View
@@ -162,7 +159,7 @@ export default function UkCheckScreen() {
             Non-UK users can still connect with{"\n"}the global community
           </Text>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
