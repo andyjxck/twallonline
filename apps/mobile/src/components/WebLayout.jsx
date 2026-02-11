@@ -20,10 +20,17 @@ export default function WebLayout({ children }) {
   const [androidEmail, setAndroidEmail] = useState('');
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
+  const [windowWidth, setWindowWidth] = useState(
+    Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : Dimensions.get('window').width
+  );
 
   useEffect(() => {
-    const sub = Dimensions.addEventListener('change', ({ window }) => setWindowWidth(window.width));
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleResize = () => setWindowWidth(window.innerWidth);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+    const sub = Dimensions.addEventListener('change', ({ window: w }) => setWindowWidth(w.width));
     return () => sub?.remove();
   }, []);
 
