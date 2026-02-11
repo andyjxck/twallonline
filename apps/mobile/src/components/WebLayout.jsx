@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Linking, Modal, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Linking, Modal, TextInput, Dimensions } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { 
   MessageCircle, User, Star, Briefcase, Vote, Sparkles, 
@@ -20,11 +20,19 @@ export default function WebLayout({ children }) {
   const [androidEmail, setAndroidEmail] = useState('');
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
+
+  useEffect(() => {
+    const sub = Dimensions.addEventListener('change', ({ window }) => setWindowWidth(window.width));
+    return () => sub?.remove();
+  }, []);
 
   if (Platform.OS !== 'web') return children;
 
   const hideSidebar = pathname?.startsWith('/onboarding') || pathname === '/auth' || pathname === '/forgot-password';
   if (hideSidebar) return <View style={{ flex: 1 }}>{children}</View>;
+
+  const isMobileWeb = windowWidth < 768;
 
   const handleAndroidSignup = async () => {
     if (!androidEmail || !androidEmail.includes('@')) return;
@@ -61,6 +69,32 @@ export default function WebLayout({ children }) {
     { icon: Sparkles, label: 'Towny AI', onPress: () => navigate('/help'), color: '#FBBF24' },
     { icon: Settings, label: 'Settings', onPress: () => navigate('/settings') },
   ];
+
+  const mobileNavItems = [
+    { icon: Globe, label: 'Feed', onPress: () => navigate('/') },
+    { icon: Star, label: 'Talent', onPress: () => navigate('/talent') },
+    { icon: Briefcase, label: 'Business', onPress: () => navigate('/businesses') },
+    { icon: Sparkles, label: 'Towny', onPress: () => navigate('/help'), color: '#FBBF24' },
+    { icon: Settings, label: 'More', onPress: () => navigate('/settings') },
+  ];
+
+  if (isMobileWeb) {
+    return (
+      <View style={styles.root}>
+        <View style={[styles.mainContent, { backgroundColor: theme.colors.background, paddingBottom: 60 }]}>
+          {children}
+        </View>
+        <View style={[styles.bottomNav, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+          {mobileNavItems.map((item, i) => (
+            <TouchableOpacity key={i} onPress={item.onPress} style={styles.bottomNavItem} activeOpacity={0.7}>
+              <item.icon size={20} color={item.color || theme.colors.textSecondary} />
+              <Text style={[styles.bottomNavLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -257,6 +291,29 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     overflow: 'hidden',
+  },
+  bottomNav: {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    height: 60,
+    borderTopWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    zIndex: 9999,
+  },
+  bottomNavItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: 6,
+    flex: 1,
+  },
+  bottomNavLabel: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   modalOverlay: {
     position: 'fixed',
