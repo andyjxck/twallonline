@@ -3,13 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, Linking, Modal, Tex
 import { useRouter, usePathname } from 'expo-router';
 import { 
   MessageCircle, User, Star, Briefcase, Vote, Sparkles, 
-  Settings, Globe, Smartphone, X, Apple, Mail, CheckCircle
+  Settings, Globe, Smartphone, X, Apple, Mail, CheckCircle,
+  Menu, ChevronDown, Shield
 } from 'lucide-react-native';
 import { useChatStore, useAuthStore } from '../utils/auth';
 import { useTheme } from '../utils/ThemeContext';
 import { Image } from 'expo-image';
+import { supabase } from '../utils/supabase';
 
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/pDXYmMhf';
+const DOCK_WIDTH = 72;
 
 export default function WebLayout({ children }) {
   const router = useRouter();
@@ -20,6 +23,9 @@ export default function WebLayout({ children }) {
   const [androidEmail, setAndroidEmail] = useState('');
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState(-1);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [windowWidth, setWindowWidth] = useState(
     Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : Dimensions.get('window').width
   );
@@ -33,6 +39,13 @@ export default function WebLayout({ children }) {
     const sub = Dimensions.addEventListener('change', ({ window: w }) => setWindowWidth(w.width));
     return () => sub?.remove();
   }, []);
+
+  useEffect(() => {
+    if (auth?.id) {
+      supabase.from('rusers').select('is_admin, is_moderator').eq('id', auth.id).single()
+        .then(({ data }) => { if (data?.is_admin || data?.is_moderator) setIsAdmin(true); });
+    }
+  }, [auth?.id]);
 
   if (Platform.OS !== 'web') return children;
 
@@ -63,18 +76,21 @@ export default function WebLayout({ children }) {
 
   const navigate = (path) => {
     useChatStore.getState().close();
+    setMobileNavOpen(false);
     router.push(path);
   };
 
-  const navItems = [
-    { icon: Globe, label: 'Feed', onPress: () => navigate('/') },
-    { icon: MessageCircle, label: 'Chat', onPress: () => useChatStore.getState().open() },
-    { icon: User, label: 'Profile', onPress: () => navigate('/profile') },
-    { icon: Star, label: 'Local Talent', onPress: () => navigate('/talent') },
-    { icon: Briefcase, label: 'Business', onPress: () => navigate('/businesses') },
-    { icon: Vote, label: 'Polls', onPress: () => navigate('/polls') },
-    { icon: Sparkles, label: 'Towny AI', onPress: () => navigate('/help'), color: '#FBBF24' },
-    { icon: Settings, label: 'Settings', onPress: () => navigate('/settings') },
+  const dockItems = [
+    { icon: Globe, label: 'Feed', onPress: () => navigate('/'), path: '/' },
+    { icon: MessageCircle, label: 'Chat', onPress: () => { useChatStore.getState().open(); }, path: null },
+    { icon: User, label: 'Profile', onPress: () => navigate('/profile'), path: '/profile' },
+    { icon: Star, label: 'Talent', onPress: () => navigate('/talent'), path: '/talent' },
+    { icon: Briefcase, label: 'Business', onPress: () => navigate('/businesses'), path: '/businesses' },
+    { icon: Vote, label: 'Polls', onPress: () => navigate('/polls'), path: '/polls' },
+    { icon: Sparkles, label: 'Towny AI', onPress: () => navigate('/help'), path: '/help', color: '#FBBF24' },
+    { icon: Settings, label: 'Settings', onPress: () => navigate('/settings'), path: '/settings' },
+    ...(isAdmin ? [{ icon: Shield, label: 'Admin', onPress: () => navigate('/admin'), path: '/admin', color: '#EF4444' }] : []),
+    { icon: Smartphone, label: 'Get App', onPress: () => setShowGetApp(true), path: null, color: '#8B85FF' },
   ];
 
   const mobileNavItems = [
@@ -85,69 +101,98 @@ export default function WebLayout({ children }) {
     { icon: Sparkles, label: 'Towny', onPress: () => navigate('/help'), color: '#FBBF24' },
   ];
 
+  // ─── MOBILE WEB ───
   if (isMobileWeb) {
     return (
       <View style={styles.root}>
-        <View style={[styles.mainContent, { backgroundColor: theme.colors.background, paddingBottom: 80 }]}>
+        <View style={[styles.mainContent, { backgroundColor: theme.colors.background }]}>
           {children}
         </View>
-        <View style={styles.pillWrapper}>
-          <View style={[styles.pillNav, { backgroundColor: 'rgba(30,30,40,0.92)', borderColor: 'rgba(255,255,255,0.08)' }]}> 
-            {mobileNavItems.map((item, i) => (
-              <TouchableOpacity key={i} onPress={item.onPress} style={styles.pillNavItem} activeOpacity={0.7}>
-                <item.icon size={20} color={item.color || 'rgba(255,255,255,0.6)'} />
-                <Text style={[styles.pillNavLabel, { color: 'rgba(255,255,255,0.6)' }]}>{item.label}</Text>
+
+        {/* Collapsed: small floating handle */}
+        {!mobileNavOpen && (
+          <TouchableOpacity
+            onPress={() => setMobileNavOpen(true)}
+            activeOpacity={0.8}
+            style={styles.mobileHandle}
+          >
+            <Menu size={20} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        )}
+
+        {/* Expanded: floating pill */}
+        {mobileNavOpen && (
+          <View style={styles.pillWrapper}>
+            <View style={styles.pillNav}>
+              {mobileNavItems.map((item, i) => (
+                <TouchableOpacity key={i} onPress={item.onPress} style={styles.pillNavItem} activeOpacity={0.7}>
+                  <item.icon size={20} color={item.color || 'rgba(255,255,255,0.6)'} />
+                  <Text style={styles.pillNavLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity onPress={() => setMobileNavOpen(false)} style={styles.pillNavItem} activeOpacity={0.7}>
+                <ChevronDown size={20} color="rgba(255,255,255,0.35)" />
               </TouchableOpacity>
-            ))}
+            </View>
           </View>
-        </View>
+        )}
       </View>
     );
   }
 
+  // ─── DESKTOP: Floating Dock ───
   return (
     <View style={styles.root}>
-      {/* Left Sidebar */}
-      <View style={[styles.sidebar, { backgroundColor: theme.colors.surface, borderRightColor: theme.colors.border }]}>
-        <View>
-          <View style={styles.sidebarHeader}>
+      {/* Floating Dock */}
+      <View style={styles.dock}>
+        <View style={styles.dockInner}>
+          {/* Logo */}
+          <View style={styles.dockLogoWrap}>
             <Image 
               source={require("../../assets/images/icon.png")} 
-              style={styles.sidebarLogo} 
+              style={styles.dockLogo} 
               contentFit="contain" 
             />
-            <Text style={[styles.sidebarTitle, { color: theme.colors.text }]}>Town Wall</Text>
           </View>
 
-          <View style={styles.navList}>
-            {navItems.map((item, i) => (
-              <TouchableOpacity 
-                key={i} 
-                onPress={item.onPress} 
-                style={styles.navItem}
+          <View style={styles.dockDivider} />
+
+          {/* Nav Icons */}
+          {dockItems.map((item, i) => {
+            const isActive = item.path && pathname === item.path;
+            const isHovered = hoveredIndex === i;
+            return (
+              <TouchableOpacity
+                key={i}
+                onPress={item.onPress}
                 activeOpacity={0.7}
+                style={[
+                  styles.dockItem,
+                  isActive && styles.dockItemActive,
+                  isHovered && styles.dockItemHover,
+                ]}
+                onMouseEnter={() => setHoveredIndex(i)}
+                onMouseLeave={() => setHoveredIndex(-1)}
               >
-                <item.icon size={20} color={item.color || theme.colors.textSecondary} />
-                <Text style={[styles.navLabel, { color: theme.colors.text }]}>{item.label}</Text>
+                <item.icon
+                  size={20}
+                  color={item.color || (isActive ? '#FFF' : 'rgba(255,255,255,0.45)')}
+                />
+                {/* Tooltip on hover */}
+                {isHovered && (
+                  <View style={styles.tooltip}>
+                    <Text style={styles.tooltipText}>{item.label}</Text>
+                  </View>
+                )}
+                {isActive && <View style={styles.dockActiveDot} />}
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.sidebarFooter}>
-          <TouchableOpacity 
-            onPress={() => setShowGetApp(true)} 
-            style={[styles.downloadBtn, { backgroundColor: 'rgba(108,99,255,0.1)', borderColor: 'rgba(108,99,255,0.2)' }]}
-          >
-            <Smartphone size={16} color="#8B85FF" />
-            <Text style={styles.downloadText}>Get the App</Text>
-          </TouchableOpacity>
-          <Text style={styles.footerUrl}>townwall.co.uk</Text>
+            );
+          })}
         </View>
       </View>
 
       {/* Main Content */}
-      <View style={[styles.mainContent, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: DOCK_WIDTH }]}>
         {children}
       </View>
 
@@ -230,77 +275,118 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#000000',
   },
-  sidebar: {
-    width: 240,
-    borderRightWidth: 1,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    justifyContent: 'space-between',
-  },
-  sidebarHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 8,
-    marginBottom: 32,
-  },
-  sidebarLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-  },
-  sidebarTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  navList: {
-    flex: 1,
-    gap: 2,
-  },
-  navItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  navLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  sidebarFooter: {
-    gap: 12,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-  },
-  downloadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  // ─── Desktop Dock ───
+  dock: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: DOCK_WIDTH,
+    zIndex: 100,
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderRadius: 10,
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  dockInner: {
+    backgroundColor: 'rgba(20,20,30,0.85)',
+    borderRadius: 20,
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
   },
-  downloadText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8B85FF',
+  dockLogoWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 4,
   },
-  footerUrl: {
+  dockLogo: {
+    width: 40,
+    height: 40,
+  },
+  dockDivider: {
+    width: 28,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 6,
+  },
+  dockItem: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  dockItemActive: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  dockItemHover: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    transform: [{ scale: 1.1 }],
+  },
+  dockActiveDot: {
+    position: 'absolute',
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFF',
+  },
+  tooltip: {
+    position: 'absolute',
+    left: 56,
+    backgroundColor: 'rgba(20,20,30,0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    zIndex: 1000,
+    whiteSpace: 'nowrap',
+  },
+  tooltipText: {
+    color: '#FFF',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.25)',
-    textAlign: 'center',
-    letterSpacing: 1,
     fontWeight: '600',
   },
+
+  // ─── Main Content ───
   mainContent: {
     flex: 1,
     overflow: 'hidden',
   },
+
+  // ─── Mobile Handle (collapsed) ───
+  mobileHandle: {
+    position: 'fixed',
+    bottom: 20,
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(30,30,40,0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+  },
+
+  // ─── Mobile Pill (expanded) ───
   pillWrapper: {
     position: 'fixed',
     bottom: 16,
@@ -315,14 +401,16 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
-    maxWidth: 400,
+    paddingHorizontal: 6,
+    maxWidth: 420,
     width: '100%',
+    backgroundColor: 'rgba(20,20,30,0.92)',
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
   },
   pillNavItem: {
     alignItems: 'center',
@@ -335,7 +423,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '600',
     letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.5)',
   },
+
+  // ─── Modal ───
   modalOverlay: {
     position: 'fixed',
     top: 0,

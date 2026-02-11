@@ -2513,7 +2513,7 @@ useEffect(() => {
   };
 
   return (
-    <View style={[styles.container, isOpen && styles.containerOpen, isOpen && Platform.OS === 'web' && { left: (typeof window !== 'undefined' && window.innerWidth >= 768) ? 240 : 0 }, !isOpen && styles.containerClosed]} pointerEvents="box-none">
+    <View style={[styles.container, isOpen && styles.containerOpen, isOpen && Platform.OS === 'web' && { left: (typeof window !== 'undefined' && window.innerWidth >= 768) ? 72 : 0 }, !isOpen && styles.containerClosed]} pointerEvents="box-none">
         <FullscreenMediaModal />
         {!isOpen && isVisible && (
           <View style={styles.fixedBubbleContainer}>
