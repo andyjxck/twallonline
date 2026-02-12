@@ -110,6 +110,9 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     const [friends, setFriends] = useState([]);
     const [addingFriend, setAddingFriend] = useState(false);
     const [friendshipStatus, setFriendshipStatus] = useState(null); // { status: 'pending'|'accepted', isRequester: boolean }
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followNotify, setFollowNotify] = useState(true);
+    const [followerCount, setFollowerCount] = useState(0);
     const [userPosts, setUserPosts] = useState([]);
     const [showRequestsModal, setShowRequestsModal] = useState(false);
 
@@ -279,6 +282,32 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
             } else {
               setFriendshipStatus(null);
             }
+
+              // Check follow status for B/T accounts
+              if (userData.account_type && userData.account_type !== 'personal') {
+                const { data: followData } = await supabase
+                  .from('rfollows')
+                  .select('id, notify')
+                  .eq('follower_id', storedUser.id)
+                  .eq('following_id', userData.id)
+                  .single();
+                if (followData) {
+                  setIsFollowing(true);
+                  setFollowNotify(followData.notify);
+                } else {
+                  setIsFollowing(false);
+                  setFollowNotify(true);
+                }
+              }
+          }
+
+          // Get follower count for B/T accounts
+          if (userData.account_type && userData.account_type !== 'personal') {
+            const { count } = await supabase
+              .from('rfollows')
+              .select('id', { count: 'exact', head: true })
+              .eq('following_id', userData.id);
+            setFollowerCount(count || 0);
           }
 
         const { count: postCount } = await supabase.from('rposts').select('*', { count: 'exact', head: true }).eq('user_id', userData.id);
@@ -517,6 +546,37 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       await supabase.from('friends').delete().eq('id', requestId);
       loadData();
     } catch (error) { toast.error("Failed to reject request"); }
+  };
+
+  const handleFollow = async () => {
+    if (!currentUser?.id || !user?.id) return;
+    try {
+      if (isFollowing) {
+        await supabase.from('rfollows').delete().eq('follower_id', currentUser.id).eq('following_id', user.id);
+        setIsFollowing(false);
+        setFollowerCount(prev => Math.max(0, prev - 1));
+      } else {
+        await supabase.from('rfollows').insert({ follower_id: currentUser.id, following_id: user.id, notify: true });
+        setIsFollowing(true);
+        setFollowNotify(true);
+        setFollowerCount(prev => prev + 1);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update follow status.");
+    }
+  };
+
+  const handleToggleNotify = async () => {
+    if (!currentUser?.id || !user?.id || !isFollowing) return;
+    const newNotify = !followNotify;
+    setFollowNotify(newNotify);
+    try {
+      await supabase.from('rfollows').update({ notify: newNotify }).eq('follower_id', currentUser.id).eq('following_id', user.id);
+    } catch (e) {
+      setFollowNotify(!newNotify);
+      toast.error("Failed to update notification preference.");
+    }
   };
 
     const handleActionFriend = async () => {
@@ -959,8 +1019,31 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
               <View style={styles.statsRow}>
                 <View style={styles.statItem}><Text style={dynamicStyles.statValue}>{stats.posts}</Text><Text style={dynamicStyles.statLabel}>Posts</Text></View>
-                <View style={styles.statItem}><Text style={dynamicStyles.statValue}>{friends.length}</Text><Text style={dynamicStyles.statLabel}>Friends</Text></View>
+                {user?.account_type && user.account_type !== 'personal' ? (
+                  <View style={styles.statItem}><Text style={dynamicStyles.statValue}>{followerCount}</Text><Text style={dynamicStyles.statLabel}>Followers</Text></View>
+                ) : (
+                  <View style={styles.statItem}><Text style={dynamicStyles.statValue}>{friends.length}</Text><Text style={dynamicStyles.statLabel}>Friends</Text></View>
+                )}
               </View>
+
+              {user?.business_showcase_id && (
+                <TouchableOpacity
+                  onPress={() => router.push('/businesses')}
+                  style={[styles.showcaseCard, { backgroundColor: '#8B5CF620', borderColor: '#8B5CF6' }]}
+                >
+                  <Text style={{ fontSize: 14 }}>📍</Text>
+                  <Text style={[styles.showcaseCardText, { color: '#8B5CF6' }]}>View Business Listing</Text>
+                </TouchableOpacity>
+              )}
+              {user?.talent_showcase_id && (
+                <TouchableOpacity
+                  onPress={() => router.push('/talent')}
+                  style={[styles.showcaseCard, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B' }]}
+                >
+                  <Text style={{ fontSize: 14 }}>🎵</Text>
+                  <Text style={[styles.showcaseCardText, { color: '#F59E0B' }]}>View Talent Showcase</Text>
+                </TouchableOpacity>
+              )}
 
                     {!isOwnProfile && (
                         <View style={styles.actionRow}>
@@ -984,7 +1067,46 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                                 <Text style={[styles.messageBtnText, { color: isLight ? "#FFF" : "#000" }]}>Message</Text>
                               </LinearGradient>
                             </TouchableOpacity>
-  
+
+                          {/* B/T accounts: Follow + Bell instead of Add Friend */}
+                          {user?.account_type && user.account_type !== 'personal' ? (
+                            <>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  if (!currentUser?.password && !currentUser?.supabase_uid) {
+                                    toast.error("Please sign up to follow!");
+                                    return;
+                                  }
+                                  handleFollow();
+                                }}
+                                style={[styles.messageBtn, { flex: 1, marginLeft: 10 }]}
+                              >
+                                <LinearGradient
+                                  colors={isFollowing ? ['#6366F1', '#8B5CF6'] : ['#818CF8', '#C084FC']}
+                                  start={{ x: 0, y: 0 }}
+                                  end={{ x: 1, y: 0 }}
+                                  style={styles.messageBtnGradient}
+                                >
+                                  {isFollowing ? (
+                                    <UserCheck size={20} color={isLight ? "#FFF" : "#000"} />
+                                  ) : (
+                                    <UserPlus size={20} color={isLight ? "#FFF" : "#000"} />
+                                  )}
+                                  <Text style={[styles.messageBtnText, { color: isLight ? "#FFF" : "#000" }]}>
+                                    {isFollowing ? 'Following' : 'Follow'}
+                                  </Text>
+                                </LinearGradient>
+                              </TouchableOpacity>
+                              {isFollowing && (
+                                <TouchableOpacity
+                                  onPress={handleToggleNotify}
+                                  style={[styles.bellBtn, { backgroundColor: followNotify ? theme.colors.primary : theme.colors.surface, borderColor: theme.colors.border }]}
+                                >
+                                  <Bell size={18} color={followNotify ? (isLight ? '#FFF' : '#000') : theme.colors.textSecondary} fill={followNotify ? (isLight ? '#FFF' : '#000') : 'transparent'} />
+                                </TouchableOpacity>
+                              )}
+                            </>
+                          ) : (
                               <TouchableOpacity 
                                 onPress={() => {
                                   if (!currentUser?.password && !currentUser?.supabase_uid) {
@@ -1024,6 +1146,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                                 )}
                             </LinearGradient>
                               </TouchableOpacity>
+                          )}
                             </View>
                         )}
 
@@ -1075,7 +1198,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                 <View style={styles.tabBar}>
                 <TouchableOpacity onPress={() => setActiveTab("posts")} style={[styles.tab, activeTab === "posts" && { borderBottomColor: theme.colors.primary }]}><Text style={[dynamicStyles.tabText, activeTab === "posts" && { color: theme.colors.primary }]}>FEED</Text></TouchableOpacity>
                 {isOwnProfile && <TouchableOpacity onPress={() => setActiveTab("starred")} style={[styles.tab, activeTab === "starred" && { borderBottomColor: theme.colors.primary }]}><Text style={[dynamicStyles.tabText, activeTab === "starred" && { color: theme.colors.primary }]}>STARRED</Text></TouchableOpacity>}
-                {isOwnProfile && <TouchableOpacity onPress={() => setActiveTab("friends")} style={[styles.tab, activeTab === "friends" && { borderBottomColor: theme.colors.primary }]}><Text style={[dynamicStyles.tabText, activeTab === "friends" && { color: theme.colors.primary }]}>FRIENDS</Text></TouchableOpacity>}
+                {isOwnProfile && (!user?.account_type || user.account_type === 'personal') && <TouchableOpacity onPress={() => setActiveTab("friends")} style={[styles.tab, activeTab === "friends" && { borderBottomColor: theme.colors.primary }]}><Text style={[dynamicStyles.tabText, activeTab === "friends" && { color: theme.colors.primary }]}>FRIENDS</Text></TouchableOpacity>}
               </View>
 
 
@@ -1508,6 +1631,30 @@ const styles = StyleSheet.create({
       gap: 10 
     },
       messageBtnText: { fontWeight: 'bold', fontSize: 16 },
+      bellBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
+        borderWidth: 1,
+      },
+      showcaseCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginHorizontal: 20,
+        marginTop: 8,
+      },
+      showcaseCardText: {
+        fontSize: 13,
+        fontWeight: '700',
+      },
       actionBtn: { 
         flexDirection: 'row', 
         alignItems: 'center', 

@@ -29,6 +29,8 @@ import { useLocationStore } from "@/utils/locationStore";
 import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
 import { toast } from 'sonner-native';
+import { useAuthStore } from '@/utils/auth';
+import { BadgeCheck } from 'lucide-react-native';
 
 const DELIVERY_PLATFORMS = [
   { id: 'amazon', name: 'Amazon', icon: ShoppingBag },
@@ -635,6 +637,41 @@ if (user?.id) {
     }
   };
 
+  const handleClaimBusiness = (item) => {
+    crossAlert(
+      "Claim Business Account",
+      `This will set your account as a Business account linked to "${item.name}". Your posts will show a Business badge and people can follow your account.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Claim",
+          onPress: async () => {
+            try {
+              const currentType = currentUser?.account_type || 'personal';
+              const newType = (currentType === 'talent') ? 'both' : 'business';
+              const { error } = await supabase
+                .from('rusers')
+                .update({
+                  account_type: newType,
+                  active_identity: 'business',
+                  business_showcase_id: item.id,
+                })
+                .eq('id', currentUser.id);
+              if (error) throw error;
+              const updated = { ...currentUser, account_type: newType, active_identity: 'business', business_showcase_id: item.id };
+              setCurrentUser(updated);
+              useAuthStore.getState().setAuth(updated);
+              toast.success("Business account claimed!");
+            } catch (e) {
+              console.error(e);
+              toast.error("Failed to claim business account.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleOpenLink = async (url) => {
     if (!url) return;
     try {
@@ -1049,12 +1086,23 @@ if (user?.id) {
                                 )}
                                 <Text style={[styles.myShowcaseHint, { color: theme.colors.primary }]}>Hold to edit</Text>
                               </View>
-                              <TouchableOpacity 
-                                onPress={() => openEditModal(item)}
-                                style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
-                              >
-                                <Text style={[styles.editButtonText, { color: isLight ? '#FFF' : '#000' }]}>Edit</Text>
-                              </TouchableOpacity>
+                              <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                                <TouchableOpacity 
+                                  onPress={() => openEditModal(item)}
+                                  style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
+                                >
+                                  <Text style={[styles.editButtonText, { color: isLight ? '#FFF' : '#000' }]}>Edit</Text>
+                                </TouchableOpacity>
+                                {item.status === 'approved' && currentUser?.business_showcase_id !== item.id && (
+                                  <TouchableOpacity
+                                    onPress={() => handleClaimBusiness(item)}
+                                    style={[styles.editButton, { backgroundColor: '#8B5CF6' }]}
+                                  >
+                                    <BadgeCheck size={14} color="#FFF" />
+                                    <Text style={[styles.editButtonText, { color: '#FFF', marginLeft: 4 }]}>Claim</Text>
+                                  </TouchableOpacity>
+                                )}
+                              </View>
                             </TouchableOpacity>
                             ))}
                           </View>

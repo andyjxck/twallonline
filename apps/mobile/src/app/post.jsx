@@ -31,7 +31,7 @@ import { useTheme } from "@/utils/ThemeContext";
 import { RichTextEditor } from "../components/RichTextEditor";
 import HippieBackground from "../components/HippieBackground";
 import { offlineStorage, checkNetworkStatus } from "../utils/offline";
-import { sendNewPostNotification } from "../utils/notifications";
+import { sendNewPostNotification, sendFollowerPostNotification } from "../utils/notifications";
 import { useLocationStore } from "../utils/locationStore";
 import { fetchZonesForCity } from "../utils/location";
 import { decode } from 'base64-arraybuffer';
@@ -270,6 +270,14 @@ export default function PostScreen() {
               posterUsername: user.username,
               postId: newPost.id
             });
+            if (user.account_type && user.account_type !== 'personal' && user.active_identity !== 'personal') {
+              sendFollowerPostNotification({
+                posterId: user.id,
+                posterUsername: user.username,
+                postId: newPost.id,
+                postTitle: title.trim()
+              });
+            }
           }
         }
 

@@ -114,6 +114,18 @@ export default function WebLayout({ children }) {
     { icon: MoreVertical, label: 'More', onPress: () => setShowMoreMenu(v => !v), path: null, hasSubmenu: true },
   ];
 
+  const handleSwitchIdentity = async (identity) => {
+    if (!auth?.id) return;
+    try {
+      const { error } = await supabase.from('rusers').update({ active_identity: identity }).eq('id', auth.id);
+      if (error) throw error;
+      useAuthStore.getState().setAuth({ ...auth, active_identity: identity });
+      setShowProfileMenu(false);
+    } catch (e) {
+      console.error('Failed to switch identity:', e);
+    }
+  };
+
   const handleSignOut = () => {
     crossAlert("Sign Out", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
@@ -300,13 +312,35 @@ export default function WebLayout({ children }) {
           {/* Profile long-press menu */}
           {showProfileMenu && (
             <View style={styles.profileDropdown}>
+              {/* Identity Switcher */}
+              {auth?.account_type && auth.account_type !== 'personal' && (
+                <>
+                  <Text style={styles.profileDropdownLabel}>SWITCH IDENTITY</Text>
+                  <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('personal')}>
+                    <User size={16} color={auth?.active_identity === 'personal' ? '#10B981' : 'rgba(255,255,255,0.7)'} />
+                    <Text style={[styles.submenuText, auth?.active_identity === 'personal' && { color: '#10B981' }]}>Personal</Text>
+                    {auth?.active_identity === 'personal' && <Text style={{ color: '#10B981', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                  </TouchableOpacity>
+                  {(auth.account_type === 'business' || auth.account_type === 'both') && (
+                    <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('business')}>
+                      <Briefcase size={16} color={auth?.active_identity === 'business' ? '#8B5CF6' : 'rgba(255,255,255,0.7)'} />
+                      <Text style={[styles.submenuText, auth?.active_identity === 'business' && { color: '#8B5CF6' }]}>Business</Text>
+                      {auth?.active_identity === 'business' && <Text style={{ color: '#8B5CF6', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                    </TouchableOpacity>
+                  )}
+                  {(auth.account_type === 'talent' || auth.account_type === 'both') && (
+                    <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('talent')}>
+                      <Star size={16} color={auth?.active_identity === 'talent' ? '#F59E0B' : 'rgba(255,255,255,0.7)'} />
+                      <Text style={[styles.submenuText, auth?.active_identity === 'talent' && { color: '#F59E0B' }]}>Talent</Text>
+                      {auth?.active_identity === 'talent' && <Text style={{ color: '#F59E0B', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                    </TouchableOpacity>
+                  )}
+                  <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 6 }} />
+                </>
+              )}
               <TouchableOpacity style={styles.submenuItem} onPress={() => { handleSignOut(); setShowProfileMenu(false); }}>
                 <LogOut size={16} color="#EF4444" />
                 <Text style={[styles.submenuText, { color: '#EF4444' }]}>Sign Out</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.submenuItem} onPress={() => { router.push('/auth'); setShowProfileMenu(false); }}>
-                <UserPlus size={16} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.submenuText}>Switch Account</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -551,6 +585,15 @@ const styles = StyleSheet.create({
   profileIconEmoji: {
     fontSize: 18,
   },
+  profileDropdownLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
   profileDropdown: {
     marginTop: 8,
     backgroundColor: 'rgba(20,20,30,0.95)',
@@ -559,7 +602,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     paddingVertical: 6,
     paddingHorizontal: 4,
-    minWidth: 160,
+    minWidth: 180,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,

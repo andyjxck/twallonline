@@ -20,6 +20,8 @@ import { useLocationStore } from "@/utils/locationStore";
 import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
 import { toast } from 'sonner-native';
+import { useAuthStore } from '@/utils/auth';
+import { BadgeCheck } from 'lucide-react-native';
 
 export default function LocalTalent() {
   const { theme, isHippie, isLight } = useTheme();
@@ -448,6 +450,41 @@ const { error } = await supabase
     }
   };
 
+  const handleClaimTalent = (item) => {
+    crossAlert(
+      "Claim Talent Account",
+      `This will set your account as a Talent account linked to "${item.name}". Your posts will show a Talent badge and people can follow your account.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Claim",
+          onPress: async () => {
+            try {
+              const currentType = currentUser?.account_type || 'personal';
+              const newType = (currentType === 'business') ? 'both' : 'talent';
+              const { error } = await supabase
+                .from('rusers')
+                .update({
+                  account_type: newType,
+                  active_identity: 'talent',
+                  talent_showcase_id: item.id,
+                })
+                .eq('id', currentUser.id);
+              if (error) throw error;
+              const updated = { ...currentUser, account_type: newType, active_identity: 'talent', talent_showcase_id: item.id };
+              setCurrentUser(updated);
+              useAuthStore.getState().setAuth(updated);
+              toast.success("Talent account claimed!");
+            } catch (e) {
+              console.error(e);
+              toast.error("Failed to claim talent account.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleOpenLink = async (url) => {
     try {
       const supported = await Linking.canOpenURL(url);
@@ -771,12 +808,23 @@ const { error } = await supabase
                       )}
                       <Text style={[styles.myShowcaseHint, { color: theme.colors.primary }]}>Hold to edit</Text>
                     </View>
-                  <TouchableOpacity 
-                    onPress={() => openEditModal(item)}
-                    style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
-                  >
-                    <Text style={[styles.editButtonText, { color: isLight ? '#FFF' : '#000' }]}>Edit</Text>
-                  </TouchableOpacity>
+                  <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                    <TouchableOpacity 
+                      onPress={() => openEditModal(item)}
+                      style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
+                    >
+                      <Text style={[styles.editButtonText, { color: isLight ? '#FFF' : '#000' }]}>Edit</Text>
+                    </TouchableOpacity>
+                    {item.status === 'approved' && currentUser?.talent_showcase_id !== item.id && (
+                      <TouchableOpacity
+                        onPress={() => handleClaimTalent(item)}
+                        style={[styles.editButton, { backgroundColor: '#F59E0B' }]}
+                      >
+                        <BadgeCheck size={14} color="#FFF" />
+                        <Text style={[styles.editButtonText, { color: '#FFF', marginLeft: 4 }]}>Claim</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </TouchableOpacity>
                 ))}
               </View>

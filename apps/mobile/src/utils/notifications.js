@@ -413,6 +413,32 @@ export const sendNewPostNotification = async ({ posterId, posterUsername, postId
   }
 };
 
+export const sendFollowerPostNotification = async ({ posterId, posterUsername, postId, postTitle }) => {
+  try {
+    const { data: followers } = await supabase
+      .from('rfollows')
+      .select('follower_id')
+      .eq('following_id', posterId)
+      .eq('notify', true);
+
+    if (!followers || followers.length === 0) return { success: true, skipped: true };
+
+    const notifications = followers.map(f => ({
+      userId: f.follower_id,
+      title: `New post from @${posterUsername}`,
+      message: postTitle ? `"${postTitle.length > 40 ? postTitle.substring(0, 40) + '...' : postTitle}"` : `@${posterUsername} just shared a new post!`,
+      type: 'follower_post',
+      link: `/post?id=${postId}`
+    }));
+
+    await Promise.all(notifications.map(n => sendNotification(n)));
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending follower post notifications:', error);
+    return { success: false, error };
+  }
+};
+
 export const sendHelpMessageNotification = async ({ senderId, senderUsername, receiverId, isFromAdmin, messageContent }) => {
   return sendNotification({
     userId: receiverId,

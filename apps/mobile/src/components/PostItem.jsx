@@ -359,7 +359,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   const fetchComments = async () => {
     setLoadingComments(true);
     try {
-      const { data } = await supabase.from('rcomments').select(`*, user:rusers (username, emoji_icon, avatar_url, nickname, is_admin, is_moderator, is_councillor, councillor_city_id)`).eq('post_id', item.id).order('created_at', { ascending: true });
+      const { data } = await supabase.from('rcomments').select(`*, user:rusers (username, emoji_icon, avatar_url, nickname, is_admin, is_moderator, is_councillor, councillor_city_id, account_type, active_identity, business_showcase_id, talent_showcase_id)`).eq('post_id', item.id).order('created_at', { ascending: true });
       setComments((data || []).filter(c => c !== null));
       
       // Fetch likes for all comments
@@ -624,6 +624,16 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                               <Text style={styles.roleBadgeText}>Councillor</Text>
                             </View>
                           )}
+                          {(item.user?.active_identity === 'business' || (item.user?.active_identity !== 'talent' && (item.user?.account_type === 'business' || item.user?.account_type === 'both'))) && item.user?.business_showcase_id && (
+                            <View style={[styles.roleBadge, styles.businessBadge]}>
+                              <Text style={styles.roleBadgeText}>Business</Text>
+                            </View>
+                          )}
+                          {(item.user?.active_identity === 'talent' || (item.user?.active_identity !== 'business' && (item.user?.account_type === 'talent' || item.user?.account_type === 'both'))) && item.user?.talent_showcase_id && (
+                            <View style={[styles.roleBadge, styles.talentBadge]}>
+                              <Text style={styles.roleBadgeText}>Talent</Text>
+                            </View>
+                          )}
                         </>
                       )}
                     </View>
@@ -871,6 +881,16 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                               {!c.is_anonymous && c.user?.is_councillor && (item.city_id === c.user?.councillor_city_id || item.zone?.city_id === c.user?.councillor_city_id) && (
                                 <View style={[styles.roleBadgeSmall, styles.councillorBadge]}>
                                   <Text style={styles.roleBadgeTextSmall}>Councillor</Text>
+                                </View>
+                              )}
+                              {!c.is_anonymous && (c.user?.account_type === 'business' || c.user?.account_type === 'both') && c.user?.business_showcase_id && (
+                                <View style={[styles.roleBadgeSmall, styles.businessBadge]}>
+                                  <Text style={styles.roleBadgeTextSmall}>Business</Text>
+                                </View>
+                              )}
+                              {!c.is_anonymous && (c.user?.account_type === 'talent' || c.user?.account_type === 'both') && c.user?.talent_showcase_id && (
+                                <View style={[styles.roleBadgeSmall, styles.talentBadge]}>
+                                  <Text style={styles.roleBadgeTextSmall}>Talent</Text>
                                 </View>
                               )}
                             </View>
@@ -1468,6 +1488,12 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
     },
     councillorBadge: {
       backgroundColor: '#0891B2',
+    },
+    businessBadge: {
+      backgroundColor: '#8B5CF6',
+    },
+    talentBadge: {
+      backgroundColor: '#F59E0B',
     },
     roleBadgeSmall: {
       paddingHorizontal: 4,
