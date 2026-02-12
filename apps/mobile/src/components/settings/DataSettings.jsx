@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Switch, Alert, Modal, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, Switch, Alert, Modal, ActivityIndicator, Platform } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScanFace, Download, Trash2, Lock, ChevronRight, FileText, X } from "lucide-react-native";
 import * as LocalAuthentication from "expo-local-authentication";
-import * as FileSystem from "expo-file-system/legacy";
-import * as Sharing from "expo-sharing";
+let FileSystem, Sharing;
+if (Platform.OS !== 'web') {
+  FileSystem = require("expo-file-system/legacy");
+  Sharing = require("expo-sharing");
+}
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/utils/supabase";
 import { decryptText } from "@/utils/encryption";
@@ -177,10 +180,21 @@ export function DataSettings({ onDelete }) {
       };
 
       const fileName = `zen_void_export_${encrypted ? "encrypted_" : ""}${new Date().toISOString().split("T")[0]}.json`;
-      const filePath = `${FileSystem.documentDirectory}${fileName}`;
+      const jsonString = JSON.stringify(exportDataObj, null, 2);
 
-      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(exportDataObj, null, 2));
-      await Sharing.shareAsync(filePath, { mimeType: "application/json" });
+      if (Platform.OS === 'web') {
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const filePath = `${FileSystem.documentDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(filePath, jsonString);
+        await Sharing.shareAsync(filePath, { mimeType: "application/json" });
+      }
 
       setShowExportModal(false);
     } catch (err) {

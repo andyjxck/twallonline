@@ -13,8 +13,17 @@ import { StatusBar } from "expo-status-bar";
 import { useColorScheme, Platform, AppState } from "react-native";
 import { Toaster } from "sonner-native";
 import { requestTrackingPermissionsAsync } from "expo-tracking-transparency";
-import { GiphySDK, GiphyDialog, GiphyTheme } from '@giphy/react-native-sdk';
-import Purchases from "react-native-purchases";
+let GiphySDK: any, GiphyDialog: any, GiphyTheme: any;
+if (Platform.OS !== 'web') {
+  const Giphy = require('@giphy/react-native-sdk');
+  GiphySDK = Giphy.GiphySDK;
+  GiphyDialog = Giphy.GiphyDialog;
+  GiphyTheme = Giphy.GiphyTheme;
+}
+let Purchases: any;
+if (Platform.OS !== 'web') {
+  Purchases = require('react-native-purchases').default;
+}
 import Constants from "expo-constants";
 import { ErrorBoundaryWrapper } from "../../__create/SharedErrorBoundary";
 import * as Notifications from "expo-notifications";

@@ -4,7 +4,11 @@ import { Copy, Download, CheckCircle, RefreshCcw, Check } from 'lucide-react-nat
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
-import { captureRef } from 'react-native-view-shot';
+import { Platform } from 'react-native';
+let captureRef;
+if (Platform.OS !== 'web') {
+  captureRef = require('react-native-view-shot').captureRef;
+}
 import { useTheme } from '../utils/ThemeContext';
 import { crossAlert } from '../utils/alert';
 import { RecoveryCodesCard } from './RecoveryCodesCard';

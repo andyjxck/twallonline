@@ -1,10 +1,24 @@
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+let SecureStore;
+if (Platform.OS !== 'web') {
+  SecureStore = require('expo-secure-store');
+}
 
 const SAVED_PROFILES_KEY = 'townwall_saved_profiles';
 
+const secureGet = async (key) => {
+  if (Platform.OS === 'web') return localStorage.getItem(key);
+  return SecureStore.getItemAsync(key);
+};
+const secureSet = async (key, value) => {
+  if (Platform.OS === 'web') { localStorage.setItem(key, value); return; }
+  return SecureStore.setItemAsync(key, value);
+};
+
 export const getSavedProfiles = async () => {
   try {
-    const profilesJson = await SecureStore.getItemAsync(SAVED_PROFILES_KEY);
+    const profilesJson = await secureGet(SAVED_PROFILES_KEY);
     return profilesJson ? JSON.parse(profilesJson) : [];
   } catch (error) {
     console.error('Error getting saved profiles:', error);
@@ -49,7 +63,7 @@ export const saveProfile = async (profile) => {
       profiles.push(newProfile);
     }
 
-    await SecureStore.setItemAsync(SAVED_PROFILES_KEY, JSON.stringify(profiles));
+    await secureSet(SAVED_PROFILES_KEY, JSON.stringify(profiles));
     return true;
   } catch (error) {
     console.error('Error saving profile:', error);
@@ -61,7 +75,7 @@ export const removeProfile = async (username) => {
   try {
     const profiles = await getSavedProfiles();
     const filteredProfiles = profiles.filter(p => p.username !== username);
-    await SecureStore.setItemAsync(SAVED_PROFILES_KEY, JSON.stringify(filteredProfiles));
+    await secureSet(SAVED_PROFILES_KEY, JSON.stringify(filteredProfiles));
     return true;
   } catch (error) {
     console.error('Error removing profile:', error);

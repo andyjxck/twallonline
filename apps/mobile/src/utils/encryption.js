@@ -3,8 +3,26 @@ import { ec as EC } from 'elliptic';
 import CryptoJS from 'crypto-js';
 import { Buffer } from 'buffer';
 import { getRandomBytes } from 'expo-crypto';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { supabase } from './supabase';
+
+let SecureStore;
+if (Platform.OS !== 'web') {
+  SecureStore = require('expo-secure-store');
+}
+
+const secureGet = async (key) => {
+  if (Platform.OS === 'web') return localStorage.getItem(key);
+  return SecureStore.getItemAsync(key);
+};
+const secureSet = async (key, value) => {
+  if (Platform.OS === 'web') { localStorage.setItem(key, value); return; }
+  return SecureStore.setItemAsync(key, value);
+};
+const secureDelete = async (key) => {
+  if (Platform.OS === 'web') { localStorage.removeItem(key); return; }
+  return SecureStore.deleteItemAsync(key);
+};
 
 const ec = new EC('secp256k1');
 const E2E_PREFIX = 'E2E:';
@@ -22,19 +40,19 @@ export async function generateKeyPair() {
 }
 
 export async function storeKeyPair(userId, keyPair) {
-  await SecureStore.setItemAsync(`e2e_private_${userId}`, keyPair.privateKey);
-  await SecureStore.setItemAsync(`e2e_public_${userId}`, keyPair.publicKey);
+  await secureSet(`e2e_private_${userId}`, keyPair.privateKey);
+  await secureSet(`e2e_public_${userId}`, keyPair.publicKey);
 }
 
 export async function loadKeyPair(userId) {
-  const privateKey = await SecureStore.getItemAsync(`e2e_private_${userId}`);
-  const publicKey = await SecureStore.getItemAsync(`e2e_public_${userId}`);
+  const privateKey = await secureGet(`e2e_private_${userId}`);
+  const publicKey = await secureGet(`e2e_public_${userId}`);
   return privateKey && publicKey ? { privateKey, publicKey } : null;
 }
 
 export async function deleteKeyPair(userId) {
-  await SecureStore.deleteItemAsync(`e2e_private_${userId}`);
-  await SecureStore.deleteItemAsync(`e2e_public_${userId}`);
+  await secureDelete(`e2e_private_${userId}`);
+  await secureDelete(`e2e_public_${userId}`);
 }
 
 export async function getOrCreateKeyPair(userId) {

@@ -1,8 +1,10 @@
 import React, { useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+let captureRef;
+if (Platform.OS !== 'web') {
+  captureRef = require('react-native-view-shot').captureRef;
+}
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
 import { ShareCard } from './ShareCard';
 import { toast } from 'sonner-native';
 import { supabase } from '../utils/supabase';

@@ -33,7 +33,14 @@ import {
     UserX,
     ImageIcon,
   } from "lucide-react-native";
-import { GiphyDialog, GiphyDialogEvent, GiphySDK, GiphyTheme } from '@giphy/react-native-sdk';
+let GiphyDialog, GiphyDialogEvent, GiphySDK, GiphyTheme;
+if (Platform.OS !== 'web') {
+  const Giphy = require('@giphy/react-native-sdk');
+  GiphyDialog = Giphy.GiphyDialog;
+  GiphyDialogEvent = Giphy.GiphyDialogEvent;
+  GiphySDK = Giphy.GiphySDK;
+  GiphyTheme = Giphy.GiphyTheme;
+}
 import { useChatStore } from "../utils/auth";
 import { useTheme } from "../utils/ThemeContext";
 import { supabase } from "../utils/supabase";

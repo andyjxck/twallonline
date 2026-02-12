@@ -7,8 +7,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from "@/utils/ThemeContext";
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import Purchases from 'react-native-purchases';
 import { supabase } from '@/utils/supabase';
+
+let Purchases;
+if (Platform.OS !== 'web') {
+  Purchases = require('react-native-purchases').default;
+}
 import { decode } from 'base64-arraybuffer';
 import * as ImagePicker from 'expo-image-picker';
 import { getStoredUser } from '@/utils/user';

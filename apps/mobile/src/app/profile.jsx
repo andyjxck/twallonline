@@ -42,8 +42,11 @@ import { getDeviceId } from "../utils/deviceId";
       } from "lucide-react-native";
   import AsyncStorage from "@react-native-async-storage/async-storage";
   import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
-import { File as FileSystemNext } from "expo-file-system/next";
+let FileSystem, FileSystemNext;
+if (Platform.OS !== 'web') {
+  FileSystem = require('expo-file-system');
+  FileSystemNext = require('expo-file-system/next').File;
+}
 import * as Haptics from "expo-haptics";
   import { decode } from "base64-arraybuffer";
   import { LinearGradient } from "expo-linear-gradient";
@@ -341,8 +344,14 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         try {
           const image = result.assets[0];
           const fileName = `${user.id}_avatar_${Date.now()}.jpg`;
-          const file = new FileSystemNext(image.uri);
-          const bytes = await file.bytes();
+          let bytes;
+          if (Platform.OS === 'web') {
+            const resp = await fetch(image.uri);
+            bytes = await resp.arrayBuffer();
+          } else {
+            const file = new FileSystemNext(image.uri);
+            bytes = await file.bytes();
+          }
           await supabase.storage.from('avatars').upload(fileName, bytes, { contentType: 'image/jpeg', upsert: true });
           const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
             await supabase.from('rusers').update({ avatar_url: publicUrl, emoji_icon: null }).eq('id', user.id);

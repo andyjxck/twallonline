@@ -8,13 +8,23 @@ import { supabase } from '@/utils/supabase';
 import { getStoredUser } from '@/utils/user';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import Purchases from 'react-native-purchases';
 import { decode } from 'base64-arraybuffer';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from "@/utils/ThemeContext";
 
-import MapView, { Marker, Callout } from 'react-native-maps';
+let Purchases;
+if (Platform.OS !== 'web') {
+  Purchases = require('react-native-purchases').default;
+}
+
+let MapView, Marker, Callout;
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Callout = Maps.Callout;
+}
 import { useLocationStore } from "@/utils/locationStore";
 import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
@@ -874,6 +884,16 @@ if (user?.id) {
       };
 
   const renderMapView = () => {
+    if (Platform.OS === 'web' || !MapView) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <MapPin size={48} color={theme.colors.textSecondary} />
+          <Text style={{ color: theme.colors.textSecondary, marginTop: 16, fontSize: 16, textAlign: 'center' }}>
+            Map view is only available on the mobile app.
+          </Text>
+        </View>
+      );
+    }
     return (
       <MapView
         style={{ flex: 1 }}

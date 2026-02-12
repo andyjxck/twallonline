@@ -37,7 +37,10 @@ import { Audio } from 'expo-av';
 import { Accelerometer } from 'expo-sensors';
 import Constants from 'expo-constants';
 const isExpoGo = Constants.appOwnership === 'expo';
-import { File as FileSystemNext } from 'expo-file-system/next';
+let FileSystemNext;
+if (Platform.OS !== 'web') {
+  FileSystemNext = require('expo-file-system/next').File;
+}
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { expandImage } from '../utils/ai';
 import { crossAlert } from '../utils/alert';
@@ -1417,8 +1420,14 @@ const stopRecording = async () => {
 
     const uploadMedia = async (uri, type) => {
       try {
-        const file = new FileSystemNext(uri);
-        const bytes = await file.bytes();
+        let bytes;
+        if (Platform.OS === 'web') {
+          const resp = await fetch(uri);
+          bytes = await resp.arrayBuffer();
+        } else {
+          const file = new FileSystemNext(uri);
+          bytes = await file.bytes();
+        }
         const extension = type === 'video' ? 'mp4' : (type === 'audio' ? 'm4a' : 'jpg');
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
         const filePath = `${user.id}/${fileName}`;
@@ -2286,8 +2295,14 @@ useEffect(() => {
         try {
           const image = result.assets[0];
           const fileName = `group_avatar_${Date.now()}.jpg`;
-          const file = new FileSystemNext(image.uri);
-          const bytes = await file.bytes();
+          let bytes;
+          if (Platform.OS === 'web') {
+            const resp = await fetch(image.uri);
+            bytes = await resp.arrayBuffer();
+          } else {
+            const file = new FileSystemNext(image.uri);
+            bytes = await file.bytes();
+          }
           await supabase.storage.from('avatars').upload(fileName, bytes, { contentType: 'image/jpeg', upsert: true });
           const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
           
