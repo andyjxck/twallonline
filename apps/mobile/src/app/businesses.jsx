@@ -386,7 +386,9 @@ if (user?.id) {
       }
     };
 
-    const LinksManager = ({ links, isEdit = false }) => (
+    const LinksManager = ({ links: rawLinks, isEdit = false }) => {
+      const links = Array.isArray(rawLinks) ? rawLinks : [];
+      return (
       <View style={styles.linksManagerContainer}>
         <View style={styles.linksHeader}>
           <Text style={dynamicStyles.label}>ADDITIONAL LINKS</Text>
@@ -394,7 +396,7 @@ if (user?.id) {
             <Plus size={14} color={isLight ? '#FFF' : '#000'} />
           </TouchableOpacity>
         </View>
-        {(links || []).map((link, index) => (
+        {links.map((link, index) => (
           <View key={link.id} style={[styles.linkCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <View style={styles.linkCardHeader}>
               <LinkIcon size={16} color={theme.colors.primary} />
@@ -433,6 +435,7 @@ if (user?.id) {
         )}
       </View>
     );
+    };
 
     const LinksDisplayModal = () => {
       if (!selectedBusiness) return null;
@@ -704,7 +707,7 @@ if (user?.id) {
         avatar: null,
         rating: item.rating?.toString() || '',
         delivery_links: item.delivery_links || {},
-        links: item.links || [],
+        links: Array.isArray(item.links) ? item.links : (typeof item.links === 'string' ? JSON.parse(item.links || '[]') : []),
         originalData: item
       });
     setShowEditModal(true);

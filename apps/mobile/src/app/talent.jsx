@@ -259,7 +259,9 @@ if (user?.id) {
       }
     };
 
-    const LinksManager = ({ links, isEdit = false }) => (
+    const LinksManager = ({ links: rawLinks, isEdit = false }) => {
+      const links = Array.isArray(rawLinks) ? rawLinks : [];
+      return (
       <View style={styles.linksManagerContainer}>
         <View style={styles.linksHeader}>
           <Text style={dynamicStyles.label}>ADDITIONAL LINKS (LINKTREE STYLE)</Text>
@@ -267,7 +269,7 @@ if (user?.id) {
             <Plus size={14} color={isLight ? '#FFF' : '#000'} />
           </TouchableOpacity>
         </View>
-        {(links || []).map((link, index) => (
+        {links.map((link, index) => (
           <View key={link.id} style={[styles.linkCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <View style={styles.linkCardHeader}>
               <LinkIcon size={16} color={theme.colors.primary} />
@@ -306,6 +308,7 @@ if (user?.id) {
         )}
       </View>
     );
+    };
 
     const LinksDisplayModal = () => {
       if (!selectedTalent) return null;
