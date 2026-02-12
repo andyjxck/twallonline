@@ -4,8 +4,11 @@ import { useRouter, usePathname } from 'expo-router';
 import { 
   MessageCircle, User, Star, Briefcase, Vote, Sparkles, 
   Settings, Globe, Smartphone, X, Apple, Mail, CheckCircle,
-  Menu, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Shield
+  Menu, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Shield,
+  MoreVertical, Bell, LogOut, UserPlus, Store
 } from 'lucide-react-native';
+import { crossAlert } from '../utils/alert';
+import { logoutUser } from '../utils/user';
 import { useChatStore, useAuthStore } from '../utils/auth';
 import { useTheme } from '../utils/ThemeContext';
 import { Image } from 'expo-image';
@@ -28,6 +31,12 @@ export default function WebLayout({ children }) {
   const [hoveredIndex, setHoveredIndex] = useState(-1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [townwallUserId, setTownwallUserId] = useState(null);
+  const [showListingsMenu, setShowListingsMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [userAvatar, setUserAvatar] = useState(null);
+  const [userEmoji, setUserEmoji] = useState(null);
+  const bubbleHidden = useChatStore(state => state.bubbleHidden);
   const [windowWidth, setWindowWidth] = useState(
     Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : Dimensions.get('window').width
   );
@@ -44,13 +53,17 @@ export default function WebLayout({ children }) {
 
   useEffect(() => {
     if (auth?.id) {
-      supabase.from('rusers').select('is_admin, is_moderator').eq('id', auth.id).single()
+      supabase.from('rusers').select('is_admin, is_moderator, avatar_url, emoji_icon').eq('id', auth.id).single()
         .then(({ data }) => {
           const admin = !!(data?.is_admin || data?.is_moderator);
           setIsAdmin(admin);
+          setUserAvatar(data?.avatar_url || null);
+          setUserEmoji(data?.emoji_icon || null);
         });
     } else {
       setIsAdmin(false);
+      setUserAvatar(null);
+      setUserEmoji(null);
     }
   }, [auth?.id]);
 
@@ -94,16 +107,23 @@ export default function WebLayout({ children }) {
 
   const dockItems = [
     { icon: Globe, label: 'Feed', onPress: () => navigate('/'), path: '/' },
-    { icon: MessageCircle, label: 'Chat', onPress: () => { useChatStore.getState().open(); }, path: null },
-    { icon: User, label: 'Profile', onPress: () => navigate('/profile'), path: '/profile' },
-    { icon: Star, label: 'Talent', onPress: () => navigate('/talent'), path: '/talent' },
-    { icon: Briefcase, label: 'Business', onPress: () => navigate('/businesses'), path: '/businesses' },
-    { icon: Vote, label: 'Polls', onPress: () => navigate('/polls'), path: '/polls' },
+    ...(bubbleHidden ? [{ icon: MessageCircle, label: 'Chat', onPress: () => { useChatStore.getState().open(); useChatStore.getState().setBubbleHidden(false); }, path: null }] : []),
+    { icon: Store, label: 'Listings', onPress: () => setShowListingsMenu(v => !v), path: null, hasSubmenu: true },
     { icon: Sparkles, label: 'Towny AI', onPress: () => navigate('/help'), path: '/help', color: '#FBBF24' },
-    { icon: Settings, label: 'Settings', onPress: () => navigate('/settings'), path: '/settings' },
     ...(isAdmin ? [{ icon: Shield, label: 'Admin', onPress: () => navigate('/admin-page-gYI'), path: '/admin-page-gYI', color: '#EF4444' }] : []),
-    { icon: Smartphone, label: 'Get App', onPress: () => setShowGetApp(true), path: null, color: '#8B85FF' },
+    { icon: MoreVertical, label: 'More', onPress: () => setShowMoreMenu(v => !v), path: null, hasSubmenu: true },
   ];
+
+  const handleSignOut = () => {
+    crossAlert("Sign Out", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: async () => {
+        await logoutUser();
+        useAuthStore.getState().setAuth(null);
+        router.replace('/auth');
+      }},
+    ]);
+  };
 
   const mobileNavItems = [
     { icon: Globe, label: 'Feed', onPress: () => navigate('/') },
@@ -183,6 +203,72 @@ export default function WebLayout({ children }) {
 
           <View style={styles.dockDivider} />
 
+          {/* Nav Icons */}
+          {dockItems.map((item, i) => {
+            const isActive = item.path && pathname === item.path;
+            const isHovered = hoveredIndex === i;
+            return (
+              <View key={i} style={{ position: 'relative' }}>
+                <TouchableOpacity
+                  onPress={item.onPress}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.dockItem,
+                    isActive && styles.dockItemActive,
+                    isHovered && styles.dockItemHover,
+                  ]}
+                  onMouseEnter={() => setHoveredIndex(i)}
+                  onMouseLeave={() => setHoveredIndex(-1)}
+                >
+                  <item.icon
+                    size={20}
+                    color={item.color || (isActive ? '#FFF' : 'rgba(255,255,255,0.45)')}
+                  />
+                  {isHovered && !item.hasSubmenu && (
+                    <View style={styles.tooltip}>
+                      <Text style={styles.tooltipText}>{item.label}</Text>
+                    </View>
+                  )}
+                  {isActive && <View style={styles.dockActiveDot} />}
+                </TouchableOpacity>
+
+                {/* Listings submenu */}
+                {item.label === 'Listings' && showListingsMenu && (
+                  <View style={styles.submenu}>
+                    <TouchableOpacity style={styles.submenuItem} onPress={() => { navigate('/talent'); setShowListingsMenu(false); }}>
+                      <Star size={16} color="rgba(255,255,255,0.7)" />
+                      <Text style={styles.submenuText}>Talent</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.submenuItem} onPress={() => { navigate('/businesses'); setShowListingsMenu(false); }}>
+                      <Briefcase size={16} color="rgba(255,255,255,0.7)" />
+                      <Text style={styles.submenuText}>Business</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* More submenu */}
+                {item.label === 'More' && showMoreMenu && (
+                  <View style={styles.submenu}>
+                    <TouchableOpacity style={styles.submenuItem} onPress={() => { navigate('/settings'); setShowMoreMenu(false); }}>
+                      <Settings size={16} color="rgba(255,255,255,0.7)" />
+                      <Text style={styles.submenuText}>Settings</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.submenuItem} onPress={() => { navigate('/polls'); setShowMoreMenu(false); }}>
+                      <Vote size={16} color="rgba(255,255,255,0.7)" />
+                      <Text style={styles.submenuText}>Polls</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.submenuItem} onPress={() => { setShowGetApp(true); setShowMoreMenu(false); }}>
+                      <Smartphone size={16} color="#8B85FF" />
+                      <Text style={styles.submenuText}>Get App</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+
+          <View style={styles.dockDivider} />
+
           {/* Collapse button */}
           <TouchableOpacity
             onPress={() => setDockCollapsed(true)}
@@ -191,42 +277,49 @@ export default function WebLayout({ children }) {
           >
             <ChevronLeft size={14} color="rgba(255,255,255,0.35)" />
           </TouchableOpacity>
-
-          <View style={styles.dockDivider} />
-
-          {/* Nav Icons */}
-          {dockItems.map((item, i) => {
-            const isActive = item.path && pathname === item.path;
-            const isHovered = hoveredIndex === i;
-            return (
-              <TouchableOpacity
-                key={i}
-                onPress={item.onPress}
-                activeOpacity={0.7}
-                style={[
-                  styles.dockItem,
-                  isActive && styles.dockItemActive,
-                  isHovered && styles.dockItemHover,
-                ]}
-                onMouseEnter={() => setHoveredIndex(i)}
-                onMouseLeave={() => setHoveredIndex(-1)}
-              >
-                <item.icon
-                  size={20}
-                  color={item.color || (isActive ? '#FFF' : 'rgba(255,255,255,0.45)')}
-                />
-                {/* Tooltip on hover */}
-                {isHovered && (
-                  <View style={styles.tooltip}>
-                    <Text style={styles.tooltipText}>{item.label}</Text>
-                  </View>
-                )}
-                {isActive && <View style={styles.dockActiveDot} />}
-              </TouchableOpacity>
-            );
-          })}
         </View>
       </View>
+      )}
+
+      {/* Profile icon — top right */}
+      {auth?.id && (
+        <View style={styles.topRightBar}>
+          <TouchableOpacity
+            onPress={() => navigate('/profile')}
+            onLongPress={() => setShowProfileMenu(v => !v)}
+            activeOpacity={0.7}
+            style={styles.profileIconBtn}
+          >
+            {userAvatar ? (
+              <Image source={{ uri: userAvatar }} style={styles.profileIconImg} />
+            ) : (
+              <Text style={styles.profileIconEmoji}>{userEmoji || '👤'}</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Profile long-press menu */}
+          {showProfileMenu && (
+            <View style={styles.profileDropdown}>
+              <TouchableOpacity style={styles.submenuItem} onPress={() => { handleSignOut(); setShowProfileMenu(false); }}>
+                <LogOut size={16} color="#EF4444" />
+                <Text style={[styles.submenuText, { color: '#EF4444' }]}>Sign Out</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.submenuItem} onPress={() => { router.push('/auth'); setShowProfileMenu(false); }}>
+                <UserPlus size={16} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.submenuText}>Switch Account</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Dismiss menus overlay */}
+      {(showListingsMenu || showMoreMenu || showProfileMenu) && (
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={() => { setShowListingsMenu(false); setShowMoreMenu(false); setShowProfileMenu(false); }}
+        />
       )}
 
       {/* Main Content */}
@@ -396,6 +489,81 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  // ─── Submenu (pops out from dock) ───
+  submenu: {
+    position: 'absolute',
+    left: 56,
+    top: 0,
+    backgroundColor: 'rgba(20,20,30,0.95)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    zIndex: 2000,
+    minWidth: 140,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+  },
+  submenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  submenuText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // ─── Top Right Profile ───
+  topRightBar: {
+    position: 'fixed',
+    top: 16,
+    right: 20,
+    zIndex: 1500,
+    alignItems: 'flex-end',
+  },
+  profileIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(20,20,30,0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    cursor: 'pointer',
+  },
+  profileIconImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  profileIconEmoji: {
+    fontSize: 18,
+  },
+  profileDropdown: {
+    marginTop: 8,
+    backgroundColor: 'rgba(20,20,30,0.95)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    minWidth: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
 
   // ─── Dock Handle (collapsed semicircle) ───

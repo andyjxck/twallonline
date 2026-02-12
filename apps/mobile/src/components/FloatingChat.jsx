@@ -140,17 +140,24 @@ const router = useRouter();
         const screenW = Dimensions.get('window').width;
         const screenH = Dimensions.get('window').height;
         const bubbleSize = 56;
+        const margin = 10;
         const defaultRight = 20;
         const defaultBottom = 110;
+        // Anchor = the bubble's default absolute position (bottom-right)
         const anchorX = screenW - defaultRight - bubbleSize;
         const anchorY = screenH - defaultBottom - bubbleSize;
         let newX = lastBubblePos.current.x + g.dx;
         let newY = lastBubblePos.current.y + g.dy;
+        // Convert to absolute screen position
         const absX = anchorX + newX;
         const absY = anchorY + newY;
-        const clampedAbsX = Math.max(10, Math.min(absX, screenW - bubbleSize - 10));
+        // Snap to nearest horizontal edge
+        const centerX = absX + bubbleSize / 2;
+        const snapAbsX = centerX < screenW / 2 ? margin : screenW - bubbleSize - margin;
+        // Clamp Y within screen bounds
         const clampedAbsY = Math.max(60, Math.min(absY, screenH - bubbleSize - 80));
-        newX = clampedAbsX - anchorX;
+        // Convert back to offset from anchor
+        newX = snapAbsX - anchorX;
         newY = clampedAbsY - anchorY;
         lastBubblePos.current = { x: newX, y: newY };
         Animated.spring(bubblePos, { toValue: { x: newX, y: newY }, useNativeDriver: false, friction: 7 }).start();
@@ -2586,6 +2593,7 @@ useEffect(() => {
                 if (isDragging.current) return;
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setIsVisible(false);
+                useChatStore.getState().setBubbleHidden(true);
               }} 
               style={styles.closeBubbleBtn}
             >
