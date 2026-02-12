@@ -190,10 +190,9 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
   };
 
   const handlePost = async () => {
-    if (!text || !selectedTag || !deviceId) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+    if (!text?.trim()) { toast.error("Please write something before posting"); return; }
+    if (!selectedTag) { toast.error("Please select a tag before posting"); return; }
+    if (!deviceId) { toast.error("Device not ready, please try again"); return; }
     setLoading(true);
     
     const online = await checkNetworkStatus();
