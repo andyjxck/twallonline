@@ -165,32 +165,92 @@ export default function WebLayout({ children }) {
           {children}
         </View>
 
-        {/* Collapsed: semicircle up-arrow tab at bottom center */}
+        {/* Collapsed: bottom bar with key icons */}
         {!mobileNavOpen && (
-          <TouchableOpacity
-            onPress={() => setMobileNavOpen(true)}
-            activeOpacity={0.8}
-            style={styles.mobileHandle}
-          >
-            <ChevronUp size={18} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
+          <View style={styles.mobileBottomBar}>
+            <TouchableOpacity onPress={() => navigate('/')} style={styles.mobileBottomItem} activeOpacity={0.7}>
+              <Globe size={20} color={pathname === '/' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigate('/talent')} style={styles.mobileBottomItem} activeOpacity={0.7}>
+              <Star size={20} color={pathname === '/talent' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMobileNavOpen(true)} style={styles.mobileBottomMenuBtn} activeOpacity={0.8}>
+              <Menu size={18} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigate('/businesses')} style={styles.mobileBottomItem} activeOpacity={0.7}>
+              <Briefcase size={20} color={pathname === '/businesses' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigate('/profile')} style={styles.mobileBottomItem} activeOpacity={0.7}>
+              {userAvatar ? (
+                <Image source={{ uri: userAvatar }} style={{ width: 24, height: 24, borderRadius: 12 }} />
+              ) : (
+                <User size={20} color={pathname === '/profile' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
+              )}
+            </TouchableOpacity>
+          </View>
         )}
 
-        {/* Expanded: floating pill */}
+        {/* Expanded: slide-up drawer */}
         {mobileNavOpen && (
-          <View style={styles.pillWrapper}>
-            <View style={styles.pillNav}>
-              {mobileNavItems.map((item, i) => (
-                <TouchableOpacity key={i} onPress={item.onPress} style={styles.pillNavItem} activeOpacity={0.7}>
-                  <item.icon size={20} color={item.color || 'rgba(255,255,255,0.6)'} />
-                  <Text style={styles.pillNavLabel}>{item.label}</Text>
+          <TouchableOpacity 
+            activeOpacity={1} 
+            onPress={() => setMobileNavOpen(false)} 
+            style={styles.mobileDrawerOverlay}
+          >
+            <TouchableOpacity activeOpacity={1} style={[styles.mobileDrawer, { backgroundColor: theme.colors.surface }]}>
+              {/* Drawer handle */}
+              <View style={styles.mobileDrawerHandle} />
+
+              {/* Profile section */}
+              {auth?.id && (
+                <TouchableOpacity onPress={() => navigate('/profile')} style={styles.mobileDrawerProfile} activeOpacity={0.7}>
+                  <View style={styles.mobileDrawerAvatarWrap}>
+                    {userAvatar ? (
+                      <Image source={{ uri: userAvatar }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                    ) : (
+                      <Text style={{ fontSize: 20 }}>{userEmoji || '👤'}</Text>
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.mobileDrawerName, { color: theme.colors.text }]}>{auth.username || 'Profile'}</Text>
+                    <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>View profile</Text>
+                  </View>
+                  <ChevronRight size={16} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
-              ))}
-              <TouchableOpacity onPress={() => setMobileNavOpen(false)} style={styles.pillNavItem} activeOpacity={0.7}>
-                <ChevronDown size={20} color="rgba(255,255,255,0.35)" />
-              </TouchableOpacity>
-            </View>
-          </View>
+              )}
+
+              <View style={[styles.mobileDrawerDivider, { backgroundColor: theme.colors.border }]} />
+
+              {/* Nav items */}
+              {mobileNavItems.map((item, i) => {
+                const isActive = item.label === 'Feed' ? pathname === '/' : 
+                  item.label === 'Talent' ? pathname === '/talent' :
+                  item.label === 'Business' ? pathname === '/businesses' :
+                  item.label === 'Profile' ? pathname === '/profile' : false;
+                return (
+                  <TouchableOpacity key={i} onPress={item.onPress} style={[styles.mobileDrawerItem, isActive && { backgroundColor: 'rgba(255,255,255,0.06)' }]} activeOpacity={0.7}>
+                    <View style={[styles.mobileDrawerIconWrap, { backgroundColor: (item.color || theme.colors.primary) + '15' }]}>
+                      <item.icon size={18} color={item.color || (isActive ? '#FFF' : theme.colors.textSecondary)} />
+                    </View>
+                    <Text style={[styles.mobileDrawerLabel, { color: isActive ? theme.colors.text : theme.colors.textSecondary }]}>{item.label}</Text>
+                    {isActive && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.primary, marginLeft: 'auto' }} />}
+                  </TouchableOpacity>
+                );
+              })}
+
+              <View style={[styles.mobileDrawerDivider, { backgroundColor: theme.colors.border }]} />
+
+              {/* Sign out */}
+              {auth?.id && (
+                <TouchableOpacity onPress={handleSignOut} style={styles.mobileDrawerItem} activeOpacity={0.7}>
+                  <View style={[styles.mobileDrawerIconWrap, { backgroundColor: 'rgba(239,68,68,0.15)' }]}>
+                    <LogOut size={18} color="#EF4444" />
+                  </View>
+                  <Text style={[styles.mobileDrawerLabel, { color: '#EF4444' }]}>Sign Out</Text>
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -659,69 +719,112 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // ─── Mobile Handle (collapsed) — semicircle tab ───
-  mobileHandle: {
+  // ─── Mobile Bottom Bar ───
+  mobileBottomBar: {
     position: 'fixed',
     bottom: 0,
-    left: '50%',
-    transform: [{ translateX: -32 }],
-    width: 64,
-    height: 28,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    backgroundColor: 'rgba(30,30,40,0.92)',
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: 'rgba(255,255,255,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 9999,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-
-  // ─── Mobile Pill (expanded) ───
-  pillWrapper: {
-    position: 'fixed',
-    bottom: 16,
-    left: 16,
-    right: 16,
-    alignItems: 'center',
-    zIndex: 9999,
-  },
-  pillNav: {
-    flexDirection: 'row',
+    left: 0,
+    right: 0,
     height: 56,
-    borderRadius: 28,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 6,
-    maxWidth: 420,
-    width: '100%',
-    backgroundColor: 'rgba(20,20,30,0.92)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
+    backgroundColor: 'rgba(15,15,25,0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    zIndex: 9999,
+    backdropFilter: 'blur(20px)',
+    paddingBottom: 2,
   },
-  pillNavItem: {
+  mobileBottomItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-    paddingVertical: 6,
-    flex: 1,
+    width: 48,
+    height: 48,
   },
-  pillNavLabel: {
-    fontSize: 9,
+  mobileBottomMenuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ─── Mobile Drawer ───
+  mobileDrawerOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+    zIndex: 10000,
+  },
+  mobileDrawer: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+    maxHeight: '80%',
+  },
+  mobileDrawerHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  mobileDrawerProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginBottom: 4,
+  },
+  mobileDrawerAvatarWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  mobileDrawerName: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  mobileDrawerDivider: {
+    height: 1,
+    marginVertical: 12,
+    opacity: 0.3,
+  },
+  mobileDrawerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginVertical: 1,
+  },
+  mobileDrawerIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileDrawerLabel: {
+    fontSize: 15,
     fontWeight: '600',
-    letterSpacing: 0.3,
-    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: -0.2,
   },
 
   // ─── Modal ───

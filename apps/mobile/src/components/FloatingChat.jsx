@@ -815,7 +815,7 @@ useEffect(() => {
                     }
                   }
                   setMessages(prev => [...prev, msgWithSender]);
-                  setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+                  setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
                   markAllAsRead(activeChat.id);
                 }
               }
@@ -1331,7 +1331,7 @@ useEffect(() => {
     
     setMessages(decryptedMessages);
     setLoading(false);
-    setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 50);
   };
 
   const startRecording = async () => {
@@ -1596,7 +1596,7 @@ const stopRecording = async () => {
           if (data) {
             const displayData = { ...data, text: text || '' };
             setMessages(prev => [...prev, displayData]);
-            setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
           const mediaPrefix = (finalMediaType === 'audio' || finalMediaType === 'image') ? 'an' : 'a';
           const mediaMessageText = `Sent ${mediaPrefix} ${finalMediaType}`;
 
@@ -3655,7 +3655,7 @@ useEffect(() => {
 
                     style={styles.messagesList}
                     contentContainerStyle={{ padding: 16 }}
-                      onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+                      onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
                     />
                     
                     <PresenceIndicator />
