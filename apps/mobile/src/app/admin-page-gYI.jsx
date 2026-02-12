@@ -171,8 +171,7 @@ export default function ModerationAdmin() {
       setCurrentUserData(userData);
       
       if (!userData?.is_admin && !userData?.is_moderator) {
-        crossAlert("Access Denied", "You do not have permission to view this page.");
-        goBack(router);
+        router.replace('/');
         return;
       }
       
