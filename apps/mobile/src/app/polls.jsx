@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { goBack } from '@/utils/navigation';
+import { crossAlert } from '@/utils/alert';
 import { 
   ChevronLeft, 
   BarChart2, 
@@ -191,7 +192,7 @@ export default function PollsScreen() {
 
   const handleVote = async (pollId, optionId) => {
     if (!user) {
-      Alert.alert("Login Required", "Please sign in to vote.");
+      crossAlert("Login Required", "Please sign in to vote.");
       return;
     }
     
@@ -207,7 +208,7 @@ export default function PollsScreen() {
 
       if (error) {
         if (error.code === '23505') {
-          Alert.alert("Already Voted", "You have already cast your vote for this poll.");
+          crossAlert("Already Voted", "You have already cast your vote for this poll.");
         } else {
           throw error;
         }
@@ -217,14 +218,14 @@ export default function PollsScreen() {
       loadData(); // Refresh to show results
     } catch (error) {
       console.error("Error voting:", error);
-      Alert.alert("Error", "Failed to cast vote.");
+      crossAlert("Error", "Failed to cast vote.");
     }
   };
 
   const handleSubmitSuggestion = async () => {
     if (!suggestion.trim()) return;
     if (!user) {
-      Alert.alert("Login Required", "Please sign in to submit suggestions.");
+      crossAlert("Login Required", "Please sign in to submit suggestions.");
       return;
     }
 
@@ -235,7 +236,7 @@ export default function PollsScreen() {
       const moderation = await moderateContent(suggestion.trim());
       if (moderation.status === 'rejected') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert("Content Policy", moderation.reason || "This suggestion doesn't meet our community standards.");
+        crossAlert("Content Policy", moderation.reason || "This suggestion doesn't meet our community standards.");
         setIsSubmittingSuggestion(false);
         return;
       }
@@ -253,10 +254,10 @@ Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
         setSuggestion('');
         loadData();
-        Alert.alert("Thank You!", "Your feature suggestion has been submitted for review.");
+        crossAlert("Thank You!", "Your feature suggestion has been submitted for review.");
     } catch (error) {
       console.error("Error submitting suggestion:", error);
-      Alert.alert("Error", "Failed to submit suggestion.");
+      crossAlert("Error", "Failed to submit suggestion.");
     } finally {
       setIsSubmittingSuggestion(false);
     }
@@ -264,12 +265,12 @@ Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     const handleCreatePoll = async () => {
       if (!user?.is_admin) {
-        Alert.alert("Permission Denied", "Only admins can create polls.");
+        crossAlert("Permission Denied", "Only admins can create polls.");
         return;
       }
 
       if (!newPollQuestion.trim() || newPollOptions.some(o => !o.trim())) {
-      Alert.alert("Incomplete", "Please provide a question and at least two options.");
+      crossAlert("Incomplete", "Please provide a question and at least two options.");
       return;
     }
 
@@ -279,7 +280,7 @@ Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const moderation = await moderateContent(newPollQuestion.trim());
       if (moderation.status === 'rejected') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert("Content Policy", moderation.reason || "This poll question doesn't meet our community standards.");
+        crossAlert("Content Policy", moderation.reason || "This poll question doesn't meet our community standards.");
         setIsCreatingPoll(false);
         return;
       }
@@ -290,7 +291,7 @@ Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           const optMod = await moderateContent(option.trim());
           if (optMod.status === 'rejected') {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("Content Policy", `Option "${option}" doesn't meet standards: ${optMod.reason}`);
+            crossAlert("Content Policy", `Option "${option}" doesn't meet standards: ${optMod.reason}`);
             setIsCreatingPoll(false);
             return;
           }
@@ -326,17 +327,17 @@ const { data: poll, error: pollError } = await supabase
       setNewPollQuestion('');
       setNewPollOptions(['', '']);
       loadData();
-      Alert.alert("Success", "New feature poll created!");
+      crossAlert("Success", "New feature poll created!");
     } catch (error) {
       console.error("Error creating poll:", error);
-      Alert.alert("Error", "Failed to create poll.");
+      crossAlert("Error", "Failed to create poll.");
     } finally {
       setIsCreatingPoll(false);
     }
   };
 
   const handleClosePoll = async (pollId) => {
-    Alert.alert(
+    crossAlert(
       "Close Poll",
       "Are you sure you want to close this poll? It will no longer be visible to users.",
       [
@@ -346,7 +347,7 @@ const { data: poll, error: pollError } = await supabase
           style: "destructive",
           onPress: async () => {
             if (!user?.is_admin) {
-              Alert.alert("Permission Denied", "Only admins can perform this action.");
+              crossAlert("Permission Denied", "Only admins can perform this action.");
               return;
             }
             try {
@@ -357,7 +358,7 @@ const { data: poll, error: pollError } = await supabase
               if (error) throw error;
               loadData();
             } catch (error) {
-              Alert.alert("Error", "Failed to close poll.");
+              crossAlert("Error", "Failed to close poll.");
             }
           }
         }

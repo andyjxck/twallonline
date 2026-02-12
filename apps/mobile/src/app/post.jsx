@@ -15,6 +15,7 @@ import {
   import { useSafeAreaInsets } from "react-native-safe-area-context";
   import { useRouter, useLocalSearchParams } from "expo-router";
   import { goBack } from "@/utils/navigation";
+import { crossAlert } from "@/utils/alert";
   import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera } from "lucide-react-native";
 
 import { getStoredUser } from "../utils/user";
@@ -132,7 +133,7 @@ export default function PostScreen() {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } catch (error) {
           console.error('Error uploading group avatar:', error);
-          Alert.alert('Error', 'Failed to upload avatar');
+          crossAlert('Error', 'Failed to upload avatar');
         }
       }
     };
@@ -182,7 +183,7 @@ export default function PostScreen() {
 
   const handlePost = async () => {
     if (!text || !selectedTag || !deviceId) {
-      Alert.alert("Error", "Please fill in all required fields");
+      crossAlert("Error", "Please fill in all required fields");
       return;
     }
     setLoading(true);
@@ -212,7 +213,7 @@ export default function PostScreen() {
 
         if (!online) {
           await offlineStorage.savePendingPost(postData);
-          Alert.alert(
+          crossAlert(
             "Saved Offline",
             "Your post has been saved and will be uploaded when you're back online.",
             [{ text: "OK", onPress: () => router.replace("/") }]
@@ -271,13 +272,13 @@ export default function PostScreen() {
         }
 
         if (moderation.status === 'rejected') {
-          Alert.alert("Rejected", moderation.reason);
+          crossAlert("Rejected", moderation.reason);
         }
 
         router.replace("/");
       } catch (error) { 
         console.error(error);
-        Alert.alert("Error", "Failed to post"); 
+        crossAlert("Error", "Failed to post"); 
       }
       finally { setLoading(false); }
     };
@@ -320,7 +321,7 @@ export default function PostScreen() {
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
-      Alert.alert("Error", "Please enter a group name");
+      crossAlert("Error", "Please enter a group name");
       return;
     }
     setLoading(true);
@@ -350,7 +351,7 @@ export default function PostScreen() {
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to create group");
+      crossAlert("Error", "Failed to create group");
     } finally {
       setLoading(false);
     }
@@ -561,7 +562,7 @@ export default function PostScreen() {
           <TouchableOpacity 
             onPress={() => {
               if (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) {
-                Alert.alert("Error", "Please provide a question and at least 2 options.");
+                crossAlert("Error", "Please provide a question and at least 2 options.");
                 return;
               }
               setHasPoll(true);

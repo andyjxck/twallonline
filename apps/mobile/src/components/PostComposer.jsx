@@ -21,7 +21,8 @@ import * as ImagePicker from "expo-image-picker";
 import { getStoredUser } from "../utils/user";
 import { getDeviceId } from "../utils/deviceId";
 import { supabase } from "../utils/supabase";
-import { moderateContent } from "../utils/ai";
+import { moderateContent } from '../utils/ai';
+import { crossAlert } from '../utils/alert';
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
 import { RichTextEditor } from "../components/RichTextEditor";
@@ -143,7 +144,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch (error) {
         console.error('Error uploading group avatar:', error);
-        Alert.alert('Error', 'Failed to upload avatar');
+        crossAlert('Error', 'Failed to upload avatar');
       }
     }
   };
@@ -155,7 +156,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
       if (data) {
         const storedUser = await getStoredUser();
         if (data.user_id !== storedUser?.id) {
-          Alert.alert("Permission Denied", "You cannot edit someone else's post.");
+          crossAlert("Permission Denied", "You cannot edit someone else's post.");
           onClose?.();
           return;
         }
@@ -189,7 +190,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
 
   const handlePost = async () => {
     if (!text || !selectedTag || !deviceId) {
-      Alert.alert("Error", "Please fill in all required fields");
+      crossAlert("Error", "Please fill in all required fields");
       return;
     }
     setLoading(true);
@@ -219,7 +220,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
 
       if (!online) {
         await offlineStorage.savePendingPost(postData);
-        Alert.alert(
+        crossAlert(
           "Saved Offline",
           "Your post has been saved and will be uploaded when you're back online.",
           [{ text: "OK", onPress: () => onSuccess?.() }]
@@ -276,20 +277,20 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
       }
 
       if (moderation.status === 'rejected') {
-        Alert.alert("Rejected", moderation.reason);
+        crossAlert("Rejected", moderation.reason);
       }
 
       onSuccess?.();
     } catch (error) { 
       console.error(error);
-      Alert.alert("Error", "Failed to post"); 
+      crossAlert("Error", "Failed to post"); 
     }
     finally { setLoading(false); }
   };
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
-      Alert.alert("Error", "Please enter a group name");
+      crossAlert("Error", "Please enter a group name");
       return;
     }
     setLoading(true);
@@ -318,7 +319,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to create group");
+      crossAlert("Error", "Failed to create group");
     } finally {
       setLoading(false);
     }
@@ -505,7 +506,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
           <TouchableOpacity 
             onPress={() => {
               if (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) {
-                Alert.alert("Error", "Please provide a question and at least 2 options.");
+                crossAlert("Error", "Please provide a question and at least 2 options.");
                 return;
               }
               setHasPoll(true);

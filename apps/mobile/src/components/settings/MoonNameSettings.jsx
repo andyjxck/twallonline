@@ -11,6 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/utils/supabase";
+import { crossAlert } from "@/utils/alert";
 
 export function MoonNameSettings({
   moonName,
@@ -32,7 +33,7 @@ export function MoonNameSettings({
       const newName = tempMoonName.trim();
 
       if (!newName) {
-        Alert.alert("Name Required", "Please enter a name for your moon.");
+        crossAlert("Name Required", "Please enter a name for your moon.");
         return;
       }
 
@@ -44,10 +45,10 @@ export function MoonNameSettings({
       if (error) throw error;
 
       onSave(); // updates state in useSettings
-      Alert.alert("Success", "Your moon's name has been updated.");
+      crossAlert("Success", "Your moon's name has been updated.");
     } catch (err) {
       console.error("Error saving moon name:", err);
-      Alert.alert("Save Failed", "Could not update moon name.");
+      crossAlert("Save Failed", "Could not update moon name.");
     } finally {
       setSaving(false);
     }

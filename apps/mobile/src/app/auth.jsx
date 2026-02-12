@@ -15,6 +15,7 @@ import {
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
+import { crossAlert } from '@/utils/alert';
 import { supabase } from "../utils/supabase";
 import { useAuthStore } from "../utils/auth";
 import { useLocationStore } from "../utils/locationStore";
@@ -136,17 +137,17 @@ export default function Auth() {
     const trimmedPassword = password.trim();
 
     if (!trimmedUsername || !trimmedPassword) {
-      Alert.alert("Error", "Please fill in all fields");
+      crossAlert("Error", "Please fill in all fields");
       return;
     }
 
     if (!isLogin && !agreeToRules) {
-      Alert.alert("Community Rules Required", "You must agree to follow the community rules to create an account.");
+      crossAlert("Community Rules Required", "You must agree to follow the community rules to create an account.");
       return;
     }
 
     if (!isLogin && (!agreedTerms || !agreedPrivacy)) {
-      Alert.alert("Error", "You must agree to the Terms of Service and Privacy Policy to create an account.");
+      crossAlert("Error", "You must agree to the Terms of Service and Privacy Policy to create an account.");
       return;
     }
 
@@ -177,7 +178,7 @@ export default function Auth() {
                   const hasData = await checkAnonHasData(currentAuth.id);
                   if (hasData) {
                     setLoading(false);
-                    Alert.alert(
+                    crossAlert(
                       "Transfer Data?",
                       "You have posts, comments, or messages from your anonymous session. Would you like to transfer them to your account?",
                       [
@@ -298,7 +299,7 @@ export default function Auth() {
         setShowRecoveryCodes(true);
       }
     } catch (error) {
-      Alert.alert("Error", error.message);
+      crossAlert("Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -339,7 +340,7 @@ export default function Auth() {
         });
 
     } catch (error) {
-      Alert.alert("Error", error.message);
+      crossAlert("Error", error.message);
       // Remove invalid profile
       if (error.message.includes("no longer valid")) {
         await removeProfile(profile.username);
@@ -351,7 +352,7 @@ export default function Auth() {
   };
 
   const handleRemoveSavedProfile = async (username) => {
-    Alert.alert(
+    crossAlert(
       "Remove Profile",
       `Are you sure you want to remove ${username} from saved profiles?`,
       [

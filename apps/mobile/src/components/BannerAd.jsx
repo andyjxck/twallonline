@@ -3,6 +3,7 @@ import { View, Platform, Text, StyleSheet, TouchableOpacity, Modal, Alert } from
 import Constants from 'expo-constants';
 import { Flag, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { crossAlert } from '../utils/alert';
 
 let RNBannerAd, BannerAdSize, TestIds;
 
@@ -40,7 +41,7 @@ export function BannerAd() {
   const handleReportAd = (reason) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowReportModal(false);
-    Alert.alert(
+    crossAlert(
       'Ad Reported',
       'Thank you for your feedback. We take ad quality seriously and will review this report.',
       [{ text: 'OK' }]

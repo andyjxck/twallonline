@@ -13,6 +13,7 @@ import {
 import { useTheme } from '../utils/ThemeContext';
 import { User, Sparkles, Flag, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { crossAlert } from '../utils/alert';
 
 const adUnitId = __DEV__ 
   ? 'ca-app-pub-3940256099942544/2247696110'
@@ -39,7 +40,7 @@ export function FeedNativeAd() {
   const handleReportAd = (reason) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowReportModal(false);
-    Alert.alert(
+    crossAlert(
       'Ad Reported',
       'Thank you for your feedback. We take ad quality seriously and will review this report.',
       [{ text: 'OK' }]

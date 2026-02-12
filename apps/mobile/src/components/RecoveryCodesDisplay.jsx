@@ -6,6 +6,7 @@ import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
 import { captureRef } from 'react-native-view-shot';
 import { useTheme } from '../utils/ThemeContext';
+import { crossAlert } from '../utils/alert';
 import { RecoveryCodesCard } from './RecoveryCodesCard';
 import { toast } from 'sonner-native';
 
@@ -227,7 +228,7 @@ export default function RecoveryCodesDisplay({
         ]} 
         onPress={() => {
           if (isRegeneration && !copied) {
-            Alert.alert(
+            crossAlert(
               "Save Codes", 
               "Please copy or download your recovery codes before continuing to ensure you don't lose access to your account.",
               [

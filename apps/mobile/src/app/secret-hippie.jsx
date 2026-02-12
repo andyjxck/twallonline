@@ -6,6 +6,7 @@ import { useAuthStore } from '@/utils/auth';
 import { theme } from '@/utils/theme';
 import { useRouter } from 'expo-router';
 import { goBack } from '@/utils/navigation';
+import { crossAlert } from '@/utils/alert';
 import { Sparkles, Palette, CheckCircle2, Lock } from 'lucide-react-native';
 import HippieBackground from '@/components/HippieBackground';
 
@@ -51,7 +52,7 @@ import HippieBackground from '@/components/HippieBackground';
 
   const handleDiscover = async () => {
     if (discoveryCount >= 5 && !hasDiscovered) {
-      Alert.alert("Too Late!", "The first 5 slots have already been claimed. Keep looking for other secrets!");
+      crossAlert("Too Late!", "The first 5 slots have already been claimed. Keep looking for other secrets!");
       return;
     }
 
@@ -68,7 +69,7 @@ import HippieBackground from '@/components/HippieBackground';
       if (!error) {
         setHasDiscovered(true);
         toggleHippie(true);
-        Alert.alert("Success!", "You've unlocked the Secret Orb Theme!");
+        crossAlert("Success!", "You've unlocked the Secret Orb Theme!");
         fetchDiscoveryInfo();
       }
     } catch (e) {

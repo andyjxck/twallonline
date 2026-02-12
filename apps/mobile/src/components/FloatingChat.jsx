@@ -40,6 +40,7 @@ const isExpoGo = Constants.appOwnership === 'expo';
 import { File as FileSystemNext } from 'expo-file-system/next';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { expandImage } from '../utils/ai';
+import { crossAlert } from '../utils/alert';
 import Markdown from 'react-native-markdown-display';
 import { 
   getOrCreateKeyPair, 
@@ -928,7 +929,7 @@ useEffect(() => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
           console.error('Error renaming group:', error);
-          Alert.alert('Error', 'Failed to rename group');
+          crossAlert('Error', 'Failed to rename group');
         }
       }
     };
@@ -952,14 +953,14 @@ useEffect(() => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
       console.error('Error setting nickname:', err);
-      Alert.alert('Error', 'Failed to save nickname');
+      crossAlert('Error', 'Failed to save nickname');
     }
   };
 
   const handleLeaveGroup = async () => {
     if (!activeChat?.is_group || !user) return;
     
-    Alert.alert(
+    crossAlert(
       'Leave Group',
       `Are you sure you want to leave "${activeChat.group_name}"?`,
       [
@@ -994,7 +995,7 @@ useEffect(() => {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
               console.error('Error leaving group:', error);
-              Alert.alert('Error', 'Failed to leave group');
+              crossAlert('Error', 'Failed to leave group');
             }
           }
         }
@@ -1003,7 +1004,7 @@ useEffect(() => {
   };
 
   const handleReportChat = async () => {
-    Alert.alert(
+    crossAlert(
       'Report Chat',
       'Are you sure you want to report this chat for inappropriate content?',
       [
@@ -1020,11 +1021,11 @@ useEffect(() => {
                 reason: 'User reported via chat'
               });
               setShowGroupInfo(false);
-              Alert.alert('Reported', 'Thank you for your report. We will review it shortly.');
+              crossAlert('Reported', 'Thank you for your report. We will review it shortly.');
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
               console.error('Error reporting chat:', error);
-              Alert.alert('Error', 'Failed to submit report');
+              crossAlert('Error', 'Failed to submit report');
             }
           }
         }
@@ -1042,7 +1043,7 @@ useEffect(() => {
 
   const confirmBlockUser = async () => {
     if (!blockReason) {
-      Alert.alert('Reason Required', 'Please select or enter a reason for blocking this user.');
+      crossAlert('Reason Required', 'Please select or enter a reason for blocking this user.');
       return;
     }
     const otherUser = getOtherUser(activeChat);
@@ -1061,10 +1062,10 @@ useEffect(() => {
       setShowChatList(true);
       loadUserAndChats();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Blocked', `@${otherUser.username} has been blocked. You will no longer see their content or be able to message them.`);
+      crossAlert('Blocked', `@${otherUser.username} has been blocked. You will no longer see their content or be able to message them.`);
     } catch (error) {
       console.error('Error blocking user:', error);
-      Alert.alert('Error', error.message || 'Failed to block user');
+      crossAlert('Error', error.message || 'Failed to block user');
     }
   };
 
@@ -1103,7 +1104,7 @@ useEffect(() => {
                 .eq('user_id', user.id);
 
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Unkept', 'Your unkeep has been recorded. Message will disappear when everyone unkeeps.');
+              crossAlert('Unkept', 'Your unkeep has been recorded. Message will disappear when everyone unkeeps.');
             } else {
               // Keep: check if session exists, if so add user as keeper; otherwise create new session
               const { data: existingSession } = await supabase
@@ -1144,7 +1145,7 @@ useEffect(() => {
               }
 
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Kept', 'Message kept. All keepers must unkeep to remove.');
+              crossAlert('Kept', 'Message kept. All keepers must unkeep to remove.');
             }
             // Update local state without reloading (preserves decrypted text)
             setMessages(prev => prev.map(m => 
@@ -1152,7 +1153,7 @@ useEffect(() => {
             ));
           } catch (err) {
             console.error('Keep/Unkeep error:', err);
-            Alert.alert('Error', 'Failed to update message keep status.');
+            crossAlert('Error', 'Failed to update message keep status.');
           }
         }
       },
@@ -1161,7 +1162,7 @@ useEffect(() => {
         style: 'destructive',
         onPress: () => {
           // Ask user if they want to include decrypted message content
-          Alert.alert(
+          crossAlert(
             'Include message content?',
             'To help moderators review this report, you can optionally include the decrypted message text. This will share the message content with moderators.',
             [
@@ -1182,10 +1183,10 @@ useEffect(() => {
                       }
                     });
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    Alert.alert('Reported', 'Message has been reported to moderators.');
+                    crossAlert('Reported', 'Message has been reported to moderators.');
                   } catch (err) {
                     console.error('Report error:', err);
-                    Alert.alert('Error', 'Failed to report message.');
+                    crossAlert('Error', 'Failed to report message.');
                   }
                 }
               },
@@ -1208,10 +1209,10 @@ useEffect(() => {
                       }
                     });
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    Alert.alert('Reported', 'Message has been reported to moderators with content.');
+                    crossAlert('Reported', 'Message has been reported to moderators with content.');
                   } catch (err) {
                     console.error('Report error:', err);
-                    Alert.alert('Error', 'Failed to report message.');
+                    crossAlert('Error', 'Failed to report message.');
                   }
                 }
               },
@@ -1223,7 +1224,7 @@ useEffect(() => {
       { text: 'Cancel', style: 'cancel' }
     ];
 
-    Alert.alert('Message Actions', null, actions);
+    crossAlert('Message Actions', null, actions);
   };
 
   const loadMessages = async (chatId, isGroup = false) => {
@@ -1308,7 +1309,7 @@ useEffect(() => {
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
-        Alert.alert('Permission denied', 'Please allow microphone access to record voice messages.');
+        crossAlert('Permission denied', 'Please allow microphone access to record voice messages.');
         return;
       }
    // Guard FIRST — prevents double recording
@@ -1438,7 +1439,7 @@ const stopRecording = async () => {
         return publicUrl;
       } catch (error) {
         console.error('Error uploading media:', error);
-        Alert.alert('Upload Error', 'Failed to upload media. Please try again.');
+        crossAlert('Upload Error', 'Failed to upload media. Please try again.');
         return null;
       }
     };
@@ -1472,11 +1473,11 @@ const stopRecording = async () => {
         setFullscreenMedia(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        Alert.alert('Error', 'Failed to expand image.');
+        crossAlert('Error', 'Failed to expand image.');
       }
     } catch (error) {
       console.error('Expansion error:', error);
-      Alert.alert('Error', 'An error occurred during expansion.');
+      crossAlert('Error', 'An error occurred during expansion.');
     } finally {
       setIsExpanding(false);
     }
@@ -1540,7 +1541,7 @@ const stopRecording = async () => {
                 isE2E = isEncrypted(messageText);
               } catch (encErr) {
                 console.error('Encryption failed, sending plaintext:', encErr);
-                Alert.alert('Encryption Notice', 'Message could not be encrypted and was sent as plaintext.');
+                crossAlert('Encryption Notice', 'Message could not be encrypted and was sent as plaintext.');
               }
             }
 
@@ -1751,14 +1752,14 @@ const stopRecording = async () => {
 
         if (audioPermission.status !== 'granted') {
           setDebugStatus('Audio permission denied');
-          Alert.alert('Permission Denied', 'Microphone access is required for calls.');
+          crossAlert('Permission Denied', 'Microphone access is required for calls.');
           setIsJoining(false);
           return;
         }
 
         if (activeCall.call_type === 'video' && cameraPermission.status !== 'granted') {
           setDebugStatus('Camera permission denied');
-          Alert.alert('Permission Denied', 'Camera access is required for video calls.');
+          crossAlert('Permission Denied', 'Camera access is required for video calls.');
           // Don't return, fallback to audio? Actually let's just let it fail or join as audio.
         }
 
@@ -1871,7 +1872,7 @@ const stopRecording = async () => {
         if (error || !data?.token) {
           console.error('Token error:', error || 'No token');
           setDebugStatus('Token failed');
-          Alert.alert('Call Error', 'Failed to secure call connection.');
+          crossAlert('Call Error', 'Failed to secure call connection.');
           setIsJoining(false);
           return;
         }
@@ -2189,7 +2190,7 @@ useEffect(() => {
         if (next) {
           const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
           if (cameraPermission.status !== 'granted') {
-            Alert.alert('Permission Denied', 'Camera access is required for video.');
+            crossAlert('Permission Denied', 'Camera access is required for video.');
             return;
           }
           if (!agoraEngine.current) return;
@@ -2227,7 +2228,7 @@ useEffect(() => {
       if (nextType === 'video') {
         const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
         if (cameraPermission.status !== 'granted') {
-          Alert.alert('Permission Denied', 'Camera access is required for video.');
+          crossAlert('Permission Denied', 'Camera access is required for video.');
           return;
         }
         await agoraEngine.current?.enableVideo();
@@ -2296,14 +2297,14 @@ useEffect(() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } catch (error) {
           console.error('Error uploading group avatar:', error);
-          Alert.alert('Error', 'Failed to upload avatar');
+          crossAlert('Error', 'Failed to upload avatar');
         }
       }
     };
 
   const createGroupChat = async () => {
     if (!groupName.trim() || selectedUsers.length < 2) {
-      Alert.alert('Error', 'Please enter a group name and select at least 2 members');
+      crossAlert('Error', 'Please enter a group name and select at least 2 members');
       return;
     }
 
@@ -3076,7 +3077,7 @@ useEffect(() => {
                           }}
                           onLongPress={() => {
                             if (canManage) {
-                              Alert.alert(
+                              crossAlert(
                                 `Manage @${member.user?.username}`,
                                 'Choose an action',
                                 [
@@ -3140,7 +3141,7 @@ useEffect(() => {
                               <Text style={[styles.groupActionText, { color: theme.colors.primary }]}>Change Group Name</Text>
                             </TouchableOpacity>
                           <TouchableOpacity style={styles.groupActionBtn} onPress={() => {
-                            Alert.alert(
+                            crossAlert(
                               'Close Group',
                               'This will permanently delete the group and all messages. Are you sure?',
                               [

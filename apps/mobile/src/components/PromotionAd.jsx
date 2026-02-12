@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Linking, Alert } from 'react-native';
 import { Image } from 'expo-image';
+import { crossAlert } from '../utils/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Star, Briefcase, MapPin, Music, Youtube, Globe, Instagram, ExternalLink, ShoppingBag, Truck, MoreHorizontal } from 'lucide-react-native';
 
@@ -23,14 +24,14 @@ export default function PromotionAd({ item }) {
   const handleOpen = () => {
     if (item.link) {
       Linking.openURL(item.link).catch(() => {
-        Alert.alert("Error", "Could not open link");
+        crossAlert("Error", "Could not open link");
       });
     }
   };
 
   const handleAdvertise = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert(
+    crossAlert(
       "Promote Your Work",
       "What would you like to list on Town Wall?",
       [

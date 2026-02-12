@@ -54,6 +54,7 @@ import * as Haptics from "expo-haptics";
   import { theme } from "../utils/theme";
   import { useTheme } from "@/utils/ThemeContext";
 import { goBack } from "@/utils/navigation";
+import { crossAlert } from "@/utils/alert";
   import { sendFriendRequestNotification, sendFriendAcceptedNotification } from "../utils/notifications";
   import { getSavedProfiles, saveProfile, removeProfile } from "../utils/savedProfiles";
   import { useAuth, useAuthStore, useChatStore } from "../utils/auth";
@@ -236,7 +237,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         
           // Prevent viewing other anon profiles
           if (userData && !userData.password && !viewingOwnProfile) {
-            Alert.alert("Private Profile", "Anonymous profiles are private and cannot be visited.");
+            crossAlert("Private Profile", "Anonymous profiles are private and cannot be visited.");
             goBack(router);
             return;
           }
@@ -348,32 +349,32 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
             await saveProfile({ username: user.username, avatar_url: publicUrl, emoji_icon: null });
             setShowEmojiPicker(false);
           loadData();
-        } catch (error) { Alert.alert("Error", "Failed to upload avatar"); }
+        } catch (error) { crossAlert("Error", "Failed to upload avatar"); }
       }
     };
 
   const handleUpdateBio = async () => {
-    if (bioText.length > 160) { Alert.alert("Error", "Bio too long"); return; }
+    if (bioText.length > 160) { crossAlert("Error", "Bio too long"); return; }
     setEditingBio(false);
     try {
       await supabase.from('rusers').update({ bio: bioText }).eq('id', user.id);
       loadData();
-    } catch (error) { Alert.alert("Error", "Failed to update bio"); }
+    } catch (error) { crossAlert("Error", "Failed to update bio"); }
   };
 
   const handleUpdateUsername = async () => {
-    if (usernameText.length < 3) { Alert.alert("Error", "Username too short"); return; }
+    if (usernameText.length < 3) { crossAlert("Error", "Username too short"); return; }
     if (user.last_username_change) {
       const lastChange = new Date(user.last_username_change);
       const diff = (new Date() - lastChange) / (1000 * 60 * 60 * 24);
       if (diff < 30) {
-        Alert.alert("Error", `You can only change your username once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
+        crossAlert("Error", `You can only change your username once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
         return;
       }
     }
     try {
       const { data: existing } = await supabase.from('rusers').select('id').eq('username', usernameText).neq('id', user.id).single();
-      if (existing) { Alert.alert("Error", "Username taken"); return; }
+      if (existing) { crossAlert("Error", "Username taken"); return; }
       
       await supabase.from('rusers').update({ 
         username: usernameText, 
@@ -381,16 +382,16 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       }).eq('id', user.id);
       setEditingUsername(false);
       loadData();
-    } catch (error) { Alert.alert("Error", "Failed to update username"); }
+    } catch (error) { crossAlert("Error", "Failed to update username"); }
   };
 
   const handleUpdateNickname = async () => {
-    if (nicknameText.length < 2) { Alert.alert("Error", "Nickname too short"); return; }
+    if (nicknameText.length < 2) { crossAlert("Error", "Nickname too short"); return; }
     if (user.last_nickname_change) {
       const lastChange = new Date(user.last_nickname_change);
       const diff = (new Date() - lastChange) / (1000 * 60 * 60 * 24);
       if (diff < 30) {
-        Alert.alert("Error", `You can only change your nickname once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
+        crossAlert("Error", `You can only change your nickname once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
         return;
       }
     }
@@ -401,7 +402,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       }).eq('id', user.id);
       setEditingNickname(false);
       loadData();
-    } catch (error) { Alert.alert("Error", "Failed to update nickname"); }
+    } catch (error) { crossAlert("Error", "Failed to update nickname"); }
   };
 
   const handleSelectEmoji = async (emoji) => {
@@ -411,11 +412,11 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       await saveProfile({ username: user.username, emoji_icon: emoji, avatar_url: null });
       setShowEmojiPicker(false);
       loadData();
-    } catch (error) { Alert.alert("Error", "Failed to update icon"); }
+    } catch (error) { crossAlert("Error", "Failed to update icon"); }
   };
 
   const handleLogout = async () => {
-    Alert.alert("Sign Out", "Are you sure?", [
+    crossAlert("Sign Out", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: async () => {
         await signOut();
@@ -457,7 +458,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     if (!target) return;
 
     if (!currentUser?.password && !currentUser?.supabase_uid) {
-      Alert.alert("Join the Wall", "Please sign up to add friends!");
+      crossAlert("Join the Wall", "Please sign up to add friends!");
       return;
     }
     setAddingFriend(true);
@@ -486,10 +487,10 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         requestId: newRel.id
       });
       
-      Alert.alert("Success", `Friend request sent to @${friendUser.username}!`);
+      crossAlert("Success", `Friend request sent to @${friendUser.username}!`);
       setFriendUsername("");
       setSearchResults([]);
-    } catch (error) { Alert.alert("Error", error.message); }
+    } catch (error) { crossAlert("Error", error.message); }
     finally { setAddingFriend(false); }
   };
 
@@ -498,14 +499,14 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       const { success, error } = await acceptFriendRequest(requestId, currentUser.id, friendId, currentUser.username);
       if (!success) throw error || new Error("Failed to accept request");
       loadData();
-    } catch (error) { Alert.alert("Error", "Failed to accept request"); }
+    } catch (error) { crossAlert("Error", "Failed to accept request"); }
   };
 
   const handleRejectFriend = async (requestId) => {
     try {
       await supabase.from('friends').delete().eq('id', requestId);
       loadData();
-    } catch (error) { Alert.alert("Error", "Failed to reject request"); }
+    } catch (error) { crossAlert("Error", "Failed to reject request"); }
   };
 
     const handleActionFriend = async () => {
@@ -513,7 +514,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       setAddingFriend(true);
       try {
         if (currentUser.id === user.id) {
-          Alert.alert("Error", "You can't add yourself");
+          crossAlert("Error", "You can't add yourself");
           return;
         }
         if (!friendshipStatus) {
@@ -546,7 +547,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
           }
         }
       } catch (error) {
-        Alert.alert("Error", error.message);
+        crossAlert("Error", error.message);
       } finally {
         setAddingFriend(false);
       }
@@ -569,7 +570,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         
             if (existing) {
               if (existing.status === 'rejected') {
-                Alert.alert("Error", "You cannot message this user.");
+                crossAlert("Error", "You cannot message this user.");
                 return;
               }
               
@@ -609,7 +610,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
             if (newChat) {
               useChatStore.getState().open(newChat.id);
               if (status === 'pending') {
-                Alert.alert("Request Sent", "Message request sent! They'll need to approve it before you can chat.");
+                crossAlert("Request Sent", "Message request sent! They'll need to approve it before you can chat.");
               }
             }
           }
@@ -617,7 +618,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     };
 
     const handleCallUser = async (targetUser) => {
-      Alert.alert("Call?", `Do you want to call @${targetUser.username}?`, [
+      crossAlert("Call?", `Do you want to call @${targetUser.username}?`, [
         { text: "Cancel", style: "cancel" },
         { text: "Call", onPress: async () => {
           try {
@@ -659,7 +660,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     };
 
     const handleRemoveFriend = async (targetUser) => {
-      Alert.alert("Remove Friend", `Are you sure you want to remove @${targetUser.username} from your friends?`, [
+      crossAlert("Remove Friend", `Are you sure you want to remove @${targetUser.username} from your friends?`, [
         { text: "Cancel", style: "cancel" },
         { text: "Remove", style: "destructive", onPress: async () => {
           try {
@@ -684,7 +685,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
     const submitReport = async (targetUser, reason) => {
       if (!reason) {
-        Alert.alert("Reason Required", "Please select a reason for reporting.");
+        crossAlert("Reason Required", "Please select a reason for reporting.");
         return;
       }
       try {
@@ -694,12 +695,12 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
           setShowReportModal(false);
           setReportingUser(null);
           setReportReason("");
-          Alert.alert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
+          crossAlert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } catch (error) {
         console.error(error);
-        Alert.alert("Error", "Failed to submit report. Please try again.");
+        crossAlert("Error", "Failed to submit report. Please try again.");
       }
     };
 
@@ -710,7 +711,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
       const confirmBlockUser = async () => {
         if (!blockReason) {
-          Alert.alert("Reason Required", "Please select a reason for blocking.");
+          crossAlert("Reason Required", "Please select a reason for blocking.");
           return;
         }
         try {
@@ -724,15 +725,15 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
           setShowBlockModal(false);
           setUserIsBlocked(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Alert.alert("Blocked", `@${user.username} has been blocked. You will no longer see their content.`);
+          crossAlert("Blocked", `@${user.username} has been blocked. You will no longer see their content.`);
         } catch (error) {
           console.error(error);
-          Alert.alert("Error", error.message || "Failed to block user.");
+          crossAlert("Error", error.message || "Failed to block user.");
         }
       };
 
       const handleMoreActions = (friend) => {
-        Alert.alert(
+        crossAlert(
           `@${friend.username}`,
           null,
           [
@@ -760,16 +761,16 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
         if (action === 'delete') {
           await supabase.from('rposts').update({ is_deleted: true }).eq('id', postId);
-          Alert.alert("Success", "Post deleted");
+          crossAlert("Success", "Post deleted");
         } else if (action === 'toggle_comments') {
           await supabase.from('rposts').update({ comments_disabled: !post?.comments_disabled }).eq('id', postId);
-          Alert.alert("Success", post?.comments_disabled ? "Comments enabled" : "Comments disabled");
+          crossAlert("Success", post?.comments_disabled ? "Comments enabled" : "Comments disabled");
         } else if (action === 'blur') {
           await supabase.from('rposts').update({ is_blurred: true, blur_reason: reason }).eq('id', postId);
-          Alert.alert("Success", "Post blurred");
+          crossAlert("Success", "Post blurred");
         } else if (action === 'unblur') {
           await supabase.from('rposts').update({ is_blurred: false, blur_reason: null }).eq('id', postId);
-          Alert.alert("Success", "Blur removed");
+          crossAlert("Success", "Blur removed");
         }
 
         // Log the moderation action
@@ -792,7 +793,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         loadData();
       } catch (e) { 
         console.error(e); 
-        Alert.alert("Error", "Failed to perform action");
+        crossAlert("Error", "Failed to perform action");
       }
     };
 
@@ -956,7 +957,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                           <TouchableOpacity 
                             onPress={() => {
                               if (!currentUser?.password && !currentUser?.supabase_uid) {
-                                Alert.alert("Join the Wall", "Please sign up to message other users!");
+                                crossAlert("Join the Wall", "Please sign up to message other users!");
                                 return;
                               }
                               handleMessageUser();
@@ -977,7 +978,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                               <TouchableOpacity 
                                 onPress={() => {
                                   if (!currentUser?.password && !currentUser?.supabase_uid) {
-                                    Alert.alert("Join the Wall", "Please sign up to add friends!");
+                                    crossAlert("Join the Wall", "Please sign up to add friends!");
                                     return;
                                   }
                                   handleActionFriend();

@@ -9,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/utils/supabase";
 import { decryptText } from "@/utils/encryption";
 import * as Haptics from "expo-haptics";
+import { crossAlert } from "@/utils/alert";
 
 function DataAction({ icon: Icon, color, title, subtitle, onPress, destructive = false }) {
   return (
@@ -101,7 +102,7 @@ export function DataSettings({ onDelete }) {
     Haptics.selectionAsync();
 
     if (!biometricAvailable) {
-      Alert.alert("Not Available", `${biometricType} is not set up on this device. Enable it in your device settings first.`);
+      crossAlert("Not Available", `${biometricType} is not set up on this device. Enable it in your device settings first.`);
       return;
     }
 
@@ -123,7 +124,7 @@ export function DataSettings({ onDelete }) {
           .eq("user_id", userId);
         setBiometricEnabled(true);
       } else {
-        Alert.alert("Authentication Failed", `Unable to enable ${biometricType} lock.`);
+        crossAlert("Authentication Failed", `Unable to enable ${biometricType} lock.`);
       }
     } else {
       await supabase
@@ -141,7 +142,7 @@ export function DataSettings({ onDelete }) {
 
       const storedUser = await AsyncStorage.getItem("currentUser");
       if (!storedUser) {
-        Alert.alert("Error", "Please sign in to export your data.");
+        crossAlert("Error", "Please sign in to export your data.");
         return;
       }
 
@@ -184,7 +185,7 @@ export function DataSettings({ onDelete }) {
       setShowExportModal(false);
     } catch (err) {
       console.error("Export error:", err);
-      Alert.alert("Export Failed", "Unable to export your data. Please try again.");
+      crossAlert("Export Failed", "Unable to export your data. Please try again.");
     } finally {
       setExporting(false);
     }

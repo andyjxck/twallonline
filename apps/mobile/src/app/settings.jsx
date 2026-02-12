@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, LogOut, Shield, Info, Bell, Key, BarChart2, ChevronRight, Trash2, UserX, X, Mail, HelpCircle, FileText } from "lucide-react-native";
 import { scheduleAccountDeletion } from "../utils/user";
+import { crossAlert } from "../utils/alert";
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
 import { goBack } from "@/utils/navigation";
@@ -144,7 +145,7 @@ if (typeof global.crypto.getRandomValues !== 'function') {
       }
 
       if (!hasPassword) {
-      Alert.alert(
+      crossAlert(
         "Password Required", 
         "To use recovery codes, you first need to set a password for your account. This helps keep your account secure!",
         [
@@ -217,7 +218,7 @@ if (typeof global.crypto.getRandomValues !== 'function') {
       // Update global store so UI re-renders correctly
       useAuthStore.getState().setAuth(data);
       
-      Alert.alert("Success", "Password updated successfully.");
+      crossAlert("Success", "Password updated successfully.");
       setShowChangePassword(false);
       setNewPassword("");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -242,7 +243,7 @@ if (typeof global.crypto.getRandomValues !== 'function') {
   };
 
   const handleUnblock = async (blockedId, username) => {
-    Alert.alert(
+    crossAlert(
       "Unblock User",
       `Are you sure you want to unblock @${username}?`,
       [
@@ -255,7 +256,7 @@ if (typeof global.crypto.getRandomValues !== 'function') {
               setBlockedUsers(prev => prev.filter(b => b.blocked_user_id !== blockedId));
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
-              Alert.alert("Error", "Failed to unblock user.");
+              crossAlert("Error", "Failed to unblock user.");
             }
           }
         }
@@ -264,7 +265,7 @@ if (typeof global.crypto.getRandomValues !== 'function') {
   };
 
 const handleSignOut = async () => {
-      Alert.alert("Sign Out", "Are you sure?", [
+      crossAlert("Sign Out", "Are you sure?", [
         { text: "Cancel", style: "cancel" },
         { text: "Sign Out", style: "destructive", onPress: async () => {
           await signOut();
@@ -275,7 +276,7 @@ const handleSignOut = async () => {
 
     const handleDeleteAccount = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      Alert.alert(
+      crossAlert(
         "Delete Account",
         "Are you sure you want to delete your account? Your account will be scheduled for permanent deletion in 30 days. You can cancel this anytime by logging back in.",
         [
@@ -284,7 +285,7 @@ const handleSignOut = async () => {
             text: "Delete Account",
             style: "destructive",
             onPress: () => {
-              Alert.alert(
+              crossAlert(
                 "Confirm Deletion",
                 "This will permanently delete all your posts, comments, messages, and profile data after 30 days. This action cannot be undone.",
                 [
@@ -297,13 +298,13 @@ const handleSignOut = async () => {
                         const updatedUser = await scheduleAccountDeletion(auth.id);
                         useAuthStore.getState().setAuth(updatedUser);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        Alert.alert(
+                        crossAlert(
                           "Account Scheduled for Deletion",
                           "Your account will be permanently deleted in 30 days. You can cancel this anytime from settings."
                         );
                       } catch (error) {
                         console.error("Error scheduling deletion:", error);
-                        Alert.alert("Error", "Failed to schedule account deletion. Please try again.");
+                        crossAlert("Error", "Failed to schedule account deletion. Please try again.");
                       }
                     }
                   }
@@ -324,14 +325,14 @@ const handleSignOut = async () => {
         if (canOpen) {
           await Linking.openURL(url);
         } else {
-          Alert.alert(
+          crossAlert(
             "Contact Support",
             `We couldn't open your mail app automatically. Please email us at:\n\n${email}`,
             [{ text: "OK" }]
           );
         }
       } catch (error) {
-        Alert.alert("Error", "Could not open mail app.");
+        crossAlert("Error", "Could not open mail app.");
       }
     };
 

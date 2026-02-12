@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { getStoredUser } from '@/utils/user';
 import { useLocationStore } from "@/utils/locationStore";
 import { goBack } from "@/utils/navigation";
+import { crossAlert } from "@/utils/alert";
 
 export default function LocalTalent() {
   const { theme, isHippie, isLight } = useTheme();
@@ -165,7 +166,7 @@ if (user?.id) {
 
   const handlePurchaseAndSubmit = async () => {
     if (!currentUser) {
-      Alert.alert("Account Required", "Please create an account or sign in to purchase a talent showcase.", [
+      crossAlert("Account Required", "Please create an account or sign in to purchase a talent showcase.", [
         { text: "Cancel", style: "cancel" },
         { text: "Sign In", onPress: () => router.push("/auth?mode=login") },
       ]);
@@ -173,7 +174,7 @@ if (user?.id) {
     }
 
     if (!form.name || !form.title || !form.link) {
-      Alert.alert("Required", "Please fill in your name, title, and link.");
+      crossAlert("Required", "Please fill in your name, title, and link.");
       return;
     }
 
@@ -185,7 +186,7 @@ if (user?.id) {
       
       if (!apiKey) {
         // Fallback for development if no API key is provided yet
-        Alert.alert(
+        crossAlert(
           "Development Mode",
           "No RevenueCat API key found. Would you like to proceed with a mock submission?",
           [
@@ -214,7 +215,7 @@ if (user?.id) {
     } catch (e) {
       console.error('RevenueCat Error:', e);
       if (!e.userCancelled) {
-        Alert.alert("Payment Error", "There was a problem with the App Store.");
+        crossAlert("Payment Error", "There was a problem with the App Store.");
       }
       setSubmitting(false);
     }
@@ -431,12 +432,12 @@ const { error } = await supabase
 
       if (error) throw error;
       
-      Alert.alert("Submitted!", "Your talent has been submitted for moderation. It will appear on the feed once approved.");
+      crossAlert("Submitted!", "Your talent has been submitted for moderation. It will appear on the feed once approved.");
       setShowModal(false);
       setForm({ name: '', title: '', platform: 'Youtube', link: '', description: '', category: 'Musician', avatar: null });
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to save your submission.");
+      crossAlert("Error", "Failed to save your submission.");
     } finally {
       setSubmitting(false);
     }
@@ -448,10 +449,10 @@ const { error } = await supabase
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert("Error", "Cannot open this link: " + url);
+        crossAlert("Error", "Cannot open this link: " + url);
       }
     } catch (error) {
-      Alert.alert("Error", "An error occurred while opening the link.");
+      crossAlert("Error", "An error occurred while opening the link.");
     }
   };
 
@@ -486,7 +487,7 @@ const { error } = await supabase
   };
 
   const handleDelete = async (item) => {
-    Alert.alert(
+    crossAlert(
       "Delete Showcase",
       "Are you sure? You will not get your money back for this.",
       [
@@ -510,7 +511,7 @@ const { error } = await supabase
               fetchTalents();
             } catch (error) {
               console.error(error);
-              Alert.alert("Error", "Failed to delete showcase.");
+              crossAlert("Error", "Failed to delete showcase.");
             } finally {
               setSubmitting(false);
             }
@@ -572,7 +573,7 @@ const { error } = await supabase
       }
 
       if (changes.length === 0) {
-        Alert.alert("No Changes", "You haven't made any changes.");
+        crossAlert("No Changes", "You haven't made any changes.");
         setSubmitting(false);
         return;
       }
@@ -591,12 +592,12 @@ const { error } = await supabase
 
       if (error) throw error;
 
-      Alert.alert("Edit Submitted!", "Your changes have been submitted for moderation. They will appear once approved.");
+      crossAlert("Edit Submitted!", "Your changes have been submitted for moderation. They will appear once approved.");
       setShowEditModal(false);
       setEditForm(null);
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to submit your changes.");
+      crossAlert("Error", "Failed to submit your changes.");
     } finally {
       setSubmitting(false);
     }

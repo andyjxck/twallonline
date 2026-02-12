@@ -10,6 +10,7 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
+import { crossAlert } from '../utils/alert';
 import {
     Heart,
     Star,
@@ -231,7 +232,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
 
   const handleCTA = async () => {
     if (!user) {
-      Alert.alert("Authentication Required", "Please sign in to use this feature.");
+      crossAlert("Authentication Required", "Please sign in to use this feature.");
       return;
     }
     
@@ -241,7 +242,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
     try {
       if (item.cta_type === 'chat') {
         if (item.user_id === user.id) {
-          Alert.alert("Note", "This is your own post!");
+          crossAlert("Note", "This is your own post!");
           return;
         }
 
@@ -326,7 +327,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         }
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to process request");
+      crossAlert("Error", "Failed to process request");
     } finally {
       setCtaLoading(false);
     }
@@ -514,11 +515,11 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         setShowReportModal(false);
         setReportReason("");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
+        crossAlert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to submit report. Please try again.");
+      crossAlert("Error", "Failed to submit report. Please try again.");
     }
   };
 
@@ -531,11 +532,11 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         setCommentToReport(null);
         setCommentReportReason("");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
+        crossAlert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to submit report. Please try again.");
+      crossAlert("Error", "Failed to submit report. Please try again.");
     }
   };
 

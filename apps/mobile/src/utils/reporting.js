@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Alert } from 'react-native';
+import { crossAlert } from './alert';
 
 export const REPORT_REASONS = [
   'Harassment or bullying',
@@ -26,7 +26,7 @@ export async function reportPost(reporterId, postId, reason) {
     .single();
 
   if (existing) {
-    Alert.alert('Already Reported', 'You have already reported this post.');
+    crossAlert('Already Reported', 'You have already reported this post.');
     return null;
   }
 
@@ -61,7 +61,7 @@ export async function reportComment(reporterId, commentId, postId, reason) {
     .single();
 
   if (existing) {
-    Alert.alert('Already Reported', 'You have already reported this comment.');
+    crossAlert('Already Reported', 'You have already reported this comment.');
     return null;
   }
 
@@ -101,7 +101,7 @@ export async function reportUser(reporterId, targetId, reason) {
     .single();
 
   if (existing) {
-    Alert.alert('Already Reported', 'You have already reported this user.');
+    crossAlert('Already Reported', 'You have already reported this user.');
     return null;
   }
 

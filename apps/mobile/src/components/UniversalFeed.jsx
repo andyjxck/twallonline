@@ -16,6 +16,7 @@ import {
     ScrollView,
     Platform,
 } from "react-native";
+import { crossAlert } from '../utils/alert';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -206,7 +207,7 @@ return () => {
     if (synced > 0) {
       await loadPendingPosts();
       await fetchPosts(true);
-      Alert.alert("Synced", `${synced} post(s) uploaded successfully.`);
+      crossAlert("Synced", `${synced} post(s) uploaded successfully.`);
     }
   };
 
@@ -304,16 +305,16 @@ return () => {
 
       if (action === 'delete') {
         await supabase.from('rposts').update({ is_deleted: true }).eq('id', postId);
-        Alert.alert("Success", "Post deleted");
+        crossAlert("Success", "Post deleted");
       } else if (action === 'toggle_comments') {
         await supabase.from('rposts').update({ comments_disabled: !post?.comments_disabled }).eq('id', postId);
-        Alert.alert("Success", post?.comments_disabled ? "Comments enabled" : "Comments disabled");
+        crossAlert("Success", post?.comments_disabled ? "Comments enabled" : "Comments disabled");
       } else if (action === 'blur') {
         await supabase.from('rposts').update({ is_blurred: true, blur_reason: reason }).eq('id', postId);
-        Alert.alert("Success", "Post blurred");
+        crossAlert("Success", "Post blurred");
       } else if (action === 'unblur') {
         await supabase.from('rposts').update({ is_blurred: false, blur_reason: null }).eq('id', postId);
-        Alert.alert("Success", "Blur removed");
+        crossAlert("Success", "Blur removed");
       }
 
       // Log the moderation action
@@ -335,7 +336,7 @@ return () => {
       fetchPosts(true);
     } catch (e) { 
       console.error(e); 
-      Alert.alert("Error", "Failed to perform action");
+      crossAlert("Error", "Failed to perform action");
     }
   };
 

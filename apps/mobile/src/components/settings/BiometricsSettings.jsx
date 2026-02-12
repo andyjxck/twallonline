@@ -5,6 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { crossAlert } from "@/utils/alert";
 
 const BIOMETRICS_KEY = "biometrics_enabled";
 
@@ -59,7 +60,7 @@ export function BiometricsSettings() {
           await AsyncStorage.setItem(BIOMETRICS_KEY, "true");
           setEnabled(true);
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Alert.alert("Enabled", `${biometricType} lock is now active.`);
+          crossAlert("Enabled", `${biometricType} lock is now active.`);
         } else {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }

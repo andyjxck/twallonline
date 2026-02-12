@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Alert } from 'react-native';
+import { crossAlert } from './alert';
 
 export const BLOCK_REASONS = [
   'Harassment or bullying',
@@ -121,7 +121,7 @@ export async function isBlocked(userId1, userId2) {
 export async function checkAndAlertBlocked(currentUserId, targetUserId) {
   const blocked = await isBlocked(currentUserId, targetUserId);
   if (blocked) {
-    Alert.alert('User Unavailable', 'This user is not available.');
+    crossAlert('User Unavailable', 'This user is not available.');
     return true;
   }
   return false;

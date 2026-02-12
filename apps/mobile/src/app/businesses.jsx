@@ -17,6 +17,7 @@ import { useTheme } from "@/utils/ThemeContext";
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { useLocationStore } from "@/utils/locationStore";
 import { goBack } from "@/utils/navigation";
+import { crossAlert } from "@/utils/alert";
 
 const DELIVERY_PLATFORMS = [
   { id: 'amazon', name: 'Amazon', icon: ShoppingBag },
@@ -172,7 +173,7 @@ if (user?.id) {
 
     const processGoogleLink = async () => {
     if (!form.link.includes('google.com/maps') && !form.link.includes('maps.app.goo.gl')) {
-      Alert.alert("Link Type", "Please enter a valid Google Maps link to auto-fill details.");
+      crossAlert("Link Type", "Please enter a valid Google Maps link to auto-fill details.");
       return;
     }
 
@@ -275,11 +276,11 @@ if (user?.id) {
       }));
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Details Extracted", "We've filled in what we could find from Google Maps!");
+      crossAlert("Details Extracted", "We've filled in what we could find from Google Maps!");
 
     } catch (error) {
       console.error("Link processing error:", error);
-      Alert.alert("Error", "Could not extract details. Please check the link or fill manually.");
+      crossAlert("Error", "Could not extract details. Please check the link or fill manually.");
     } finally {
       setProcessingLink(false);
     }
@@ -287,7 +288,7 @@ if (user?.id) {
 
   const handlePurchaseAndSubmit = async () => {
     if (!currentUser) {
-      Alert.alert("Account Required", "Please create an account or sign in to purchase a business showcase.", [
+      crossAlert("Account Required", "Please create an account or sign in to purchase a business showcase.", [
         { text: "Cancel", style: "cancel" },
         { text: "Sign In", onPress: () => router.push("/auth?mode=login") },
       ]);
@@ -295,7 +296,7 @@ if (user?.id) {
     }
 
     if (!form.name || !form.category) {
-      Alert.alert("Required", "Please fill in the business name and category.");
+      crossAlert("Required", "Please fill in the business name and category.");
       return;
     }
 
@@ -306,7 +307,7 @@ if (user?.id) {
       const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY;
       
       if (!apiKey) {
-        Alert.alert(
+        crossAlert(
           "Development Mode",
           "No RevenueCat API key found. Would you like to proceed with a mock submission?",
           [
@@ -335,7 +336,7 @@ if (user?.id) {
       } catch (e) {
         console.error('RevenueCat Error:', e);
         if (!e.userCancelled) {
-          Alert.alert("Payment Error", "There was a problem with the App Store.");
+          crossAlert("Payment Error", "There was a problem with the App Store.");
         }
         setSubmitting(false);
       }
@@ -611,13 +612,13 @@ if (user?.id) {
 
         if (error) throw error;
         
-        Alert.alert("Submitted!", "Your business has been submitted for moderation. It will appear once approved.");
+        crossAlert("Submitted!", "Your business has been submitted for moderation. It will appear once approved.");
         setShowModal(false);
         setForm({ name: '', category: 'Retail', link: '', address: '', phone: '', description: '', avatar: null, rating: null, delivery_links: {} });
       fetchBusinesses();
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to save business details.");
+      crossAlert("Error", "Failed to save business details.");
     } finally {
       setSubmitting(false);
     }
@@ -631,7 +632,7 @@ if (user?.id) {
         await Linking.openURL(url);
       }
     } catch (error) {
-      Alert.alert("Error", "Cannot open link");
+      crossAlert("Error", "Cannot open link");
     }
   };
 
@@ -668,7 +669,7 @@ if (user?.id) {
   };
 
   const handleDelete = async (item) => {
-    Alert.alert(
+    crossAlert(
       "Delete Showcase",
       "Are you sure? You will not get your money back for this.",
       [
@@ -692,7 +693,7 @@ if (user?.id) {
               fetchBusinesses();
             } catch (error) {
               console.error(error);
-              Alert.alert("Error", "Failed to delete showcase.");
+              crossAlert("Error", "Failed to delete showcase.");
             } finally {
               setSubmitting(false);
             }
@@ -757,7 +758,7 @@ if (user?.id) {
       }
 
       if (changes.length === 0) {
-        Alert.alert("No Changes", "You haven't made any changes.");
+        crossAlert("No Changes", "You haven't made any changes.");
         setSubmitting(false);
         return;
       }
@@ -776,12 +777,12 @@ if (user?.id) {
 
       if (error) throw error;
 
-      Alert.alert("Edit Submitted!", "Your changes have been submitted for moderation. They will appear once approved.");
+      crossAlert("Edit Submitted!", "Your changes have been submitted for moderation. They will appear once approved.");
       setShowEditModal(false);
       setEditForm(null);
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to submit your changes.");
+      crossAlert("Error", "Failed to submit your changes.");
     } finally {
       setSubmitting(false);
     }
