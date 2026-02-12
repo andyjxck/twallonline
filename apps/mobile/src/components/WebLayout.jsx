@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { 
   MessageCircle, User, Star, Briefcase, Vote, Sparkles, 
   Settings, Globe, Smartphone, X, Apple, Mail, CheckCircle,
-  Menu, ChevronDown, ChevronUp, Shield
+  Menu, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Shield
 } from 'lucide-react-native';
 import { useChatStore, useAuthStore } from '../utils/auth';
 import { useTheme } from '../utils/ThemeContext';
@@ -24,6 +24,7 @@ export default function WebLayout({ children }) {
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [dockCollapsed, setDockCollapsed] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [townwallUserId, setTownwallUserId] = useState(null);
@@ -156,7 +157,19 @@ export default function WebLayout({ children }) {
   // ─── DESKTOP: Floating Dock ───
   return (
     <View style={styles.root}>
+      {/* Collapsed: semicircle tab on left edge */}
+      {dockCollapsed && (
+        <TouchableOpacity
+          onPress={() => setDockCollapsed(false)}
+          activeOpacity={0.8}
+          style={styles.dockHandle}
+        >
+          <ChevronRight size={16} color="rgba(255,255,255,0.7)" />
+        </TouchableOpacity>
+      )}
+
       {/* Floating Dock */}
+      {!dockCollapsed && (
       <View style={styles.dock}>
         <View style={styles.dockInner}>
           {/* Logo — click to go to Town Wall profile */}
@@ -166,6 +179,17 @@ export default function WebLayout({ children }) {
               style={styles.dockLogo} 
               contentFit="contain" 
             />
+          </TouchableOpacity>
+
+          <View style={styles.dockDivider} />
+
+          {/* Collapse button */}
+          <TouchableOpacity
+            onPress={() => setDockCollapsed(true)}
+            activeOpacity={0.7}
+            style={styles.dockCollapseBtn}
+          >
+            <ChevronLeft size={14} color="rgba(255,255,255,0.35)" />
           </TouchableOpacity>
 
           <View style={styles.dockDivider} />
@@ -203,9 +227,10 @@ export default function WebLayout({ children }) {
           })}
         </View>
       </View>
+      )}
 
       {/* Main Content */}
-      <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: DOCK_WIDTH }]}>
+      <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: dockCollapsed ? 0 : DOCK_WIDTH }]}>
         {children}
       </View>
 
@@ -371,6 +396,36 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  // ─── Dock Handle (collapsed semicircle) ───
+  dockHandle: {
+    position: 'fixed',
+    left: 0,
+    top: '50%',
+    transform: [{ translateY: -24 }],
+    width: 20,
+    height: 48,
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    backgroundColor: 'rgba(20,20,30,0.85)',
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 200,
+    cursor: 'pointer',
+  },
+  dockCollapseBtn: {
+    width: 36,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
   },
 
   // ─── Main Content ───

@@ -290,6 +290,12 @@ export default function RootLayout() {
   const lastRegisteredUserId = useRef<string | null>(null);
 
   useEffect(() => {
+      if (isReady && auth?.id && Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
+
       if (isReady && auth?.id && Platform.OS !== 'web') {
         if (lastRegisteredUserId.current === auth.id) return;
         lastRegisteredUserId.current = auth.id;
@@ -386,6 +392,24 @@ export default function RootLayout() {
                 ...notification.metadata,
               },
             });
+
+            // Show browser notification on web when tab is not focused
+            if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              if (document.hidden || !document.hasFocus()) {
+                const n = new Notification(notification.title || 'Town Wall', {
+                  body: notification.message || '',
+                  icon: '/assets/images/favicon.png',
+                  tag: `tw-${notification.id}`,
+                });
+                n.onclick = () => {
+                  window.focus();
+                  if (notification.link) {
+                    router.push(notification.link);
+                  }
+                  n.close();
+                };
+              }
+            }
           }
         )
         .subscribe();
