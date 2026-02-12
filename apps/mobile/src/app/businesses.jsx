@@ -658,13 +658,20 @@ if (user?.id) {
                 })
                 .eq('id', currentUser.id);
               if (error) throw error;
-              const updated = { ...currentUser, account_type: newType, active_identity: 'business', business_showcase_id: item.id };
-              setCurrentUser(updated);
-              useAuthStore.getState().setAuth(updated);
-              toast.success("Business account claimed!");
+              // Re-fetch full user from DB to get all fields
+              const { data: freshUser } = await supabase
+                .from('rusers')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+              if (freshUser) {
+                setCurrentUser(freshUser);
+                useAuthStore.getState().setAuth(freshUser);
+              }
+              toast.success("Business account claimed! Your posts will now show a Business badge.");
             } catch (e) {
-              console.error(e);
-              toast.error("Failed to claim business account.");
+              console.error('Claim business error:', e);
+              toast.error("Failed to claim business account: " + (e.message || 'Unknown error'));
             }
           },
         },
