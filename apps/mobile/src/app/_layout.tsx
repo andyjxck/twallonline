@@ -503,7 +503,7 @@ export default function RootLayout() {
             <ThemeWrapper>
                 <SandboxHandler />
                 <GlobalErrorReporter />
-                <Toaster />
+                <Toaster position="top-center" style={{ zIndex: 99999 }} />
                 <WebLayout>
                   <LayoutWithTheme />
                   <FloatingChat />
