@@ -359,7 +359,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   const fetchComments = async () => {
     setLoadingComments(true);
     try {
-      const { data } = await supabase.from('rcomments').select(`*, user:rusers (username, emoji_icon, avatar_url, nickname, is_admin, is_moderator, is_councillor, councillor_city_id, account_type, active_identity, business_showcase_id, talent_showcase_id)`).eq('post_id', item.id).order('created_at', { ascending: true });
+      const { data } = await supabase.from('rcomments').select(`*, user:rusers (*)`).eq('post_id', item.id).order('created_at', { ascending: true });
       setComments((data || []).filter(c => c !== null));
       
       // Fetch likes for all comments
