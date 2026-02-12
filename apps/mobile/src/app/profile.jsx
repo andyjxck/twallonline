@@ -113,6 +113,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     const [isFollowing, setIsFollowing] = useState(false);
     const [followNotify, setFollowNotify] = useState(true);
     const [followerCount, setFollowerCount] = useState(0);
+    const [showcaseData, setShowcaseData] = useState(null);
     const [userPosts, setUserPosts] = useState([]);
     const [showRequestsModal, setShowRequestsModal] = useState(false);
 
@@ -301,13 +302,25 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
               }
           }
 
-          // Get follower count for B/T accounts
+          // Get follower count + showcase data for B/T accounts
           if (userData.account_type && userData.account_type !== 'personal') {
             const { count } = await supabase
               .from('rfollows')
               .select('id', { count: 'exact', head: true })
               .eq('following_id', userData.id);
             setFollowerCount(count || 0);
+
+            // Fetch linked showcase data
+            let showcase = null;
+            if (userData.talent_showcase_id) {
+              const { data: t } = await supabase.from('rtalent').select('id, name, avatar_url, title, category').eq('id', userData.talent_showcase_id).single();
+              if (t) showcase = { ...showcase, talent: t };
+            }
+            if (userData.business_showcase_id) {
+              const { data: b } = await supabase.from('rbusinesses').select('id, name, avatar_url, category').eq('id', userData.business_showcase_id).single();
+              if (b) showcase = { ...showcase, business: b };
+            }
+            setShowcaseData(showcase);
           }
 
         const { count: postCount } = await supabase.from('rposts').select('*', { count: 'exact', head: true }).eq('user_id', userData.id);
@@ -943,11 +956,20 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                 disabled={!isOwnProfile}
                 style={[styles.avatarContainer, { backgroundColor: theme.colors.surface }]}
               >
-                {user?.avatar_url ? (
-                  <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
-                ) : (
-                  <Text style={styles.avatarEmoji}>{user?.emoji_icon || "👤"}</Text>
-                )}
+                {(() => {
+                  const activeShowcase = user?.active_identity === 'talent' && showcaseData?.talent
+                    ? showcaseData.talent
+                    : user?.active_identity === 'business' && showcaseData?.business
+                    ? showcaseData.business
+                    : null;
+                  if (activeShowcase?.avatar_url) {
+                    return <Image source={{ uri: activeShowcase.avatar_url }} style={styles.avatar} />;
+                  }
+                  if (user?.avatar_url) {
+                    return <Image source={{ uri: user.avatar_url }} style={styles.avatar} />;
+                  }
+                  return <Text style={styles.avatarEmoji}>{user?.emoji_icon || "👤"}</Text>;
+                })()}
                 {isOwnProfile && (
                     <View style={[styles.editBadge, { backgroundColor: theme.colors.primary, borderColor: theme.colors.background }]}>
                       <ImageIcon size={12} color={isLight ? "#FFF" : "#000"} />
@@ -955,6 +977,13 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                   )}
                 </TouchableOpacity>
                 <View style={styles.nameSection}>
+                {/* Show showcase name when in B/T identity */}
+                {user?.active_identity === 'talent' && showcaseData?.talent && (
+                  <Text style={[dynamicStyles.username, { color: '#F59E0B', fontWeight: '800' }]}>{showcaseData.talent.name}</Text>
+                )}
+                {user?.active_identity === 'business' && showcaseData?.business && (
+                  <Text style={[dynamicStyles.username, { color: '#8B5CF6', fontWeight: '800' }]}>{showcaseData.business.name}</Text>
+                )}
                 {editingUsername ? (
                   <View style={styles.editRow}>
                     <RNTextInput
@@ -969,7 +998,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                   </View>
                 ) : (
                   <TouchableOpacity onPress={() => isOwnProfile && setEditingUsername(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={dynamicStyles.username}>@{user?.username}</Text>
+                    <Text style={[dynamicStyles.username, showcaseData && { fontSize: 13, opacity: 0.6 }]}>@{user?.username}</Text>
                     {isOwnProfile && <Pencil size={14} color={theme.colors.textSecondary} />}
                   </TouchableOpacity>
                 )}

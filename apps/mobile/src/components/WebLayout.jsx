@@ -53,19 +53,29 @@ export default function WebLayout({ children }) {
 
   useEffect(() => {
     if (auth?.id) {
-      supabase.from('rusers').select('is_admin, is_moderator, avatar_url, emoji_icon').eq('id', auth.id).single()
-        .then(({ data }) => {
+      supabase.from('rusers').select('is_admin, is_moderator, avatar_url, emoji_icon, account_type, active_identity, talent_showcase_id, business_showcase_id').eq('id', auth.id).single()
+        .then(async ({ data }) => {
           const admin = !!(data?.is_admin || data?.is_moderator);
           setIsAdmin(admin);
-          setUserAvatar(data?.avatar_url || null);
-          setUserEmoji(data?.emoji_icon || null);
+          // If in B/T identity, fetch showcase avatar
+          let avatar = data?.avatar_url || null;
+          let emoji = data?.emoji_icon || null;
+          if (data?.active_identity === 'talent' && data?.talent_showcase_id) {
+            const { data: t } = await supabase.from('rtalent').select('avatar_url').eq('id', data.talent_showcase_id).single();
+            if (t?.avatar_url) avatar = t.avatar_url;
+          } else if (data?.active_identity === 'business' && data?.business_showcase_id) {
+            const { data: b } = await supabase.from('rbusinesses').select('avatar_url').eq('id', data.business_showcase_id).single();
+            if (b?.avatar_url) avatar = b.avatar_url;
+          }
+          setUserAvatar(avatar);
+          setUserEmoji(emoji);
         });
     } else {
       setIsAdmin(false);
       setUserAvatar(null);
       setUserEmoji(null);
     }
-  }, [auth?.id]);
+  }, [auth?.id, auth?.active_identity]);
 
   useEffect(() => {
     supabase.from('rusers').select('id').eq('username', 'townwall').single()

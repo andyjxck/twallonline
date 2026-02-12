@@ -665,6 +665,7 @@ if (user?.id) {
                 .eq('id', currentUser.id)
                 .single();
               if (freshUser) {
+                freshUser._business = { name: item.name, avatar_url: item.avatar_url, category: item.category };
                 setCurrentUser(freshUser);
                 useAuthStore.getState().setAuth(freshUser);
               }

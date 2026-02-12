@@ -471,13 +471,15 @@ const { error } = await supabase
                 })
                 .eq('id', currentUser.id);
               if (error) throw error;
-              // Re-fetch full user from DB to get all fields
+              // Re-fetch full user from DB + showcase data
               const { data: freshUser } = await supabase
                 .from('rusers')
                 .select('*')
                 .eq('id', currentUser.id)
                 .single();
               if (freshUser) {
+                // Attach showcase info to auth for display
+                freshUser._talent = { name: item.name, avatar_url: item.avatar_url, title: item.title, category: item.category };
                 setCurrentUser(freshUser);
                 useAuthStore.getState().setAuth(freshUser);
               }
