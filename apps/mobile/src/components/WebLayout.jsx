@@ -165,9 +165,8 @@ export default function WebLayout({ children }) {
           {children}
         </View>
 
-        {/* Collapsed: bottom bar with key icons */}
-        {!mobileNavOpen && (
-          <View style={styles.mobileBottomBar}>
+        {/* Bottom bar with key icons */}
+        <View style={styles.mobileBottomBar}>
             <TouchableOpacity onPress={() => navigate('/')} style={styles.mobileBottomItem} activeOpacity={0.7}>
               <Globe size={20} color={pathname === '/' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
             </TouchableOpacity>
@@ -188,69 +187,35 @@ export default function WebLayout({ children }) {
               )}
             </TouchableOpacity>
           </View>
-        )}
 
-        {/* Expanded: slide-up drawer */}
+        {/* Popup menu above center button */}
         {mobileNavOpen && (
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setMobileNavOpen(false)} 
-            style={styles.mobileDrawerOverlay}
-          >
-            <TouchableOpacity activeOpacity={1} style={[styles.mobileDrawer, { backgroundColor: theme.colors.surface }]}>
-              {/* Drawer handle */}
-              <View style={styles.mobileDrawerHandle} />
-
-              {/* Profile section */}
+          <>
+            <TouchableOpacity 
+              activeOpacity={1} 
+              onPress={() => setMobileNavOpen(false)} 
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}
+            />
+            <View style={styles.mobilePopup}>
+              {mobileNavItems.filter(item => !['Feed', 'Talent', 'Business', 'Profile'].includes(item.label)).map((item, i) => (
+                <TouchableOpacity key={i} onPress={item.onPress} style={styles.mobilePopupItem} activeOpacity={0.7}>
+                  <item.icon size={16} color={item.color || 'rgba(255,255,255,0.7)'} />
+                  <Text style={[styles.mobilePopupText, item.color && { color: item.color }]}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 4 }} />
+              <TouchableOpacity onPress={() => navigate('/settings')} style={styles.mobilePopupItem} activeOpacity={0.7}>
+                <Settings size={16} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.mobilePopupText}>Settings</Text>
+              </TouchableOpacity>
               {auth?.id && (
-                <TouchableOpacity onPress={() => navigate('/profile')} style={styles.mobileDrawerProfile} activeOpacity={0.7}>
-                  <View style={styles.mobileDrawerAvatarWrap}>
-                    {userAvatar ? (
-                      <Image source={{ uri: userAvatar }} style={{ width: 40, height: 40, borderRadius: 20 }} />
-                    ) : (
-                      <Text style={{ fontSize: 20 }}>{userEmoji || '👤'}</Text>
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.mobileDrawerName, { color: theme.colors.text }]}>{auth.username || 'Profile'}</Text>
-                    <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>View profile</Text>
-                  </View>
-                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                <TouchableOpacity onPress={handleSignOut} style={styles.mobilePopupItem} activeOpacity={0.7}>
+                  <LogOut size={16} color="#EF4444" />
+                  <Text style={[styles.mobilePopupText, { color: '#EF4444' }]}>Sign Out</Text>
                 </TouchableOpacity>
               )}
-
-              <View style={[styles.mobileDrawerDivider, { backgroundColor: theme.colors.border }]} />
-
-              {/* Nav items */}
-              {mobileNavItems.map((item, i) => {
-                const isActive = item.label === 'Feed' ? pathname === '/' : 
-                  item.label === 'Talent' ? pathname === '/talent' :
-                  item.label === 'Business' ? pathname === '/businesses' :
-                  item.label === 'Profile' ? pathname === '/profile' : false;
-                return (
-                  <TouchableOpacity key={i} onPress={item.onPress} style={[styles.mobileDrawerItem, isActive && { backgroundColor: 'rgba(255,255,255,0.06)' }]} activeOpacity={0.7}>
-                    <View style={[styles.mobileDrawerIconWrap, { backgroundColor: (item.color || theme.colors.primary) + '15' }]}>
-                      <item.icon size={18} color={item.color || (isActive ? '#FFF' : theme.colors.textSecondary)} />
-                    </View>
-                    <Text style={[styles.mobileDrawerLabel, { color: isActive ? theme.colors.text : theme.colors.textSecondary }]}>{item.label}</Text>
-                    {isActive && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.primary, marginLeft: 'auto' }} />}
-                  </TouchableOpacity>
-                );
-              })}
-
-              <View style={[styles.mobileDrawerDivider, { backgroundColor: theme.colors.border }]} />
-
-              {/* Sign out */}
-              {auth?.id && (
-                <TouchableOpacity onPress={handleSignOut} style={styles.mobileDrawerItem} activeOpacity={0.7}>
-                  <View style={[styles.mobileDrawerIconWrap, { backgroundColor: 'rgba(239,68,68,0.15)' }]}>
-                    <LogOut size={18} color="#EF4444" />
-                  </View>
-                  <Text style={[styles.mobileDrawerLabel, { color: '#EF4444' }]}>Sign Out</Text>
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-          </TouchableOpacity>
+            </View>
+          </>
         )}
       </View>
     );
@@ -751,80 +716,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ─── Mobile Drawer ───
-  mobileDrawerOverlay: {
+  // ─── Mobile Popup Menu ───
+  mobilePopup: {
     position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-    zIndex: 10000,
-  },
-  mobileDrawer: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    maxHeight: '80%',
-  },
-  mobileDrawerHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  mobileDrawerProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    marginBottom: 4,
-  },
-  mobileDrawerAvatarWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  mobileDrawerName: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  mobileDrawerDivider: {
-    height: 1,
-    marginVertical: 12,
-    opacity: 0.3,
-  },
-  mobileDrawerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    bottom: 64,
+    left: '50%',
+    transform: [{ translateX: -80 }],
+    backgroundColor: 'rgba(20,20,30,0.95)',
     borderRadius: 12,
-    marginVertical: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    zIndex: 9999,
+    minWidth: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
-  mobileDrawerIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  mobilePopupItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
-  mobileDrawerLabel: {
-    fontSize: 15,
+  mobilePopupText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
     fontWeight: '600',
-    letterSpacing: -0.2,
   },
 
   // ─── Modal ───
