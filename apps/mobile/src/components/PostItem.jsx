@@ -148,14 +148,15 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   useEffect(() => {
     if (!item?.user || item.is_anonymous) return;
     const u = item.user;
-    if (u.active_identity === 'talent' && u.talent_showcase_id) {
+    const postIdentity = item.posted_as_identity || u.active_identity;
+    if (postIdentity === 'talent' && u.talent_showcase_id) {
       supabase.from('rtalent').select('name, avatar_url').eq('id', u.talent_showcase_id).single()
         .then(({ data }) => { if (data) setShowcaseInfo(data); });
-    } else if (u.active_identity === 'business' && u.business_showcase_id) {
+    } else if (postIdentity === 'business' && u.business_showcase_id) {
       supabase.from('rbusinesses').select('name, avatar_url').eq('id', u.business_showcase_id).single()
         .then(({ data }) => { if (data) setShowcaseInfo(data); });
     }
-  }, [item?.user?.active_identity, item?.user?.talent_showcase_id, item?.user?.business_showcase_id]);
+  }, [item?.posted_as_identity, item?.user?.active_identity, item?.user?.talent_showcase_id, item?.user?.business_showcase_id]);
 
   const dynamicStyles = useMemo(() => StyleSheet.create({
     username: { ...styles.username, color: theme.colors.text },
@@ -639,16 +640,16 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                               <Text style={styles.roleBadgeText}>Councillor</Text>
                             </View>
                           )}
-                          {(item.user?.active_identity === 'business' || (item.user?.active_identity !== 'talent' && (item.user?.account_type === 'business' || item.user?.account_type === 'both'))) && item.user?.business_showcase_id && (
-                            <View style={[styles.roleBadge, styles.businessBadge]}>
-                              <Text style={styles.roleBadgeText}>Business</Text>
-                            </View>
-                          )}
-                          {(item.user?.active_identity === 'talent' || (item.user?.active_identity !== 'business' && (item.user?.account_type === 'talent' || item.user?.account_type === 'both'))) && item.user?.talent_showcase_id && (
-                            <View style={[styles.roleBadge, styles.talentBadge]}>
-                              <Text style={styles.roleBadgeText}>Talent</Text>
-                            </View>
-                          )}
+                          {(() => {
+                            const pid = item.posted_as_identity || item.user?.active_identity;
+                            if (pid === 'business' && item.user?.business_showcase_id) return (
+                              <View style={[styles.roleBadge, styles.businessBadge]}><Text style={styles.roleBadgeText}>Business</Text></View>
+                            );
+                            if (pid === 'talent' && item.user?.talent_showcase_id) return (
+                              <View style={[styles.roleBadge, styles.talentBadge]}><Text style={styles.roleBadgeText}>Talent</Text></View>
+                            );
+                            return null;
+                          })()}
                         </>
                       )}
                     </View>

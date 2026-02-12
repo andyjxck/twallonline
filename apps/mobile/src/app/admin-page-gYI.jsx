@@ -39,7 +39,8 @@ import {
     Globe,
     ShoppingBag,
     Truck,
-    Ban
+    Ban,
+    X
   } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/utils/supabase';
@@ -96,6 +97,7 @@ export default function ModerationAdmin() {
     const [analyticsDetailData, setAnalyticsDetailData] = useState([]);
     const [displayLimit, setDisplayLimit] = useState(25);
     const [analyticsDetailLoading, setAnalyticsDetailLoading] = useState(false);
+    const [previewPost, setPreviewPost] = useState(null);
 
     const getLevel = (u) => {
       if (!u) return 0;
@@ -680,6 +682,35 @@ export default function ModerationAdmin() {
                   .eq('id', log.target_id);
                 
                 if (error) throw error;
+              } else if (log.target_type === 'user') {
+                if (log.action === 'delete_post') {
+                  let restored = false;
+                  const reportMatch = log.reason?.match(/report\s+(\d+)/i);
+                  if (reportMatch) {
+                    const { data: report } = await supabase.from('rreports').select('target_id, target_type, post_id').eq('id', reportMatch[1]).maybeSingle();
+                    const postId = report?.target_type === 'post' ? report.target_id : report?.post_id;
+                    if (postId) {
+                      const { error } = await supabase.from('rposts').update({ is_deleted: false, deletion_reason: null, deleted_by: null }).eq('id', postId);
+                      if (!error) restored = true;
+                    }
+                  }
+                  if (!restored) {
+                    const { data: deletedPosts } = await supabase.from('rposts').select('id').eq('user_id', log.target_id).eq('is_deleted', true).order('created_at', { ascending: false }).limit(1);
+                    if (deletedPosts && deletedPosts.length > 0) {
+                      await supabase.from('rposts').update({ is_deleted: false, deletion_reason: null, deleted_by: null }).eq('id', deletedPosts[0].id);
+                    }
+                  }
+                } else {
+                  const updateData = {};
+                  if (log.action === 'mute') updateData.is_muted = false;
+                  else if (log.action === 'ban') updateData.is_banned = false;
+                  else if (log.action === 'warn') {
+                    const { data: targetUser } = await supabase.from('rusers').select('warning_count').eq('id', log.target_id).single();
+                    updateData.warning_count = Math.max(0, (targetUser?.warning_count || 1) - 1);
+                  }
+                  const { error } = await supabase.from('rusers').update(updateData).eq('id', log.target_id);
+                  if (error) throw error;
+                }
               }
               
               // Mark the original log as undone
@@ -688,6 +719,12 @@ export default function ModerationAdmin() {
                 undone_by: admin.id,
                 undone_at: new Date().toISOString()
               }).eq('id', log.id);
+
+              // Reset associated report back to pending
+              const reportMatch2 = log.reason?.match(/report\s+(\d+)/i);
+              if (reportMatch2) {
+                await supabase.from('rreports').update({ status: 'pending' }).eq('id', reportMatch2[1]);
+              }
               
               // Log the undo action
               await supabase.from('rmoderation_logs').insert({
@@ -1804,14 +1841,26 @@ export default function ModerationAdmin() {
           }
 
           if (activeTab === 'logs') {
-            const canUndo = !item.is_undone && item.target_type === 'post' && ['delete', 'delete_post', 'blur', 'toggle_comments'].includes(item.action);
+            const canUndo = !item.is_undone && (
+                  (item.target_type === 'post' && ['delete', 'delete_post', 'blur', 'unblur', 'toggle_comments'].includes(item.action)) ||
+                  (item.target_type === 'user' && ['mute', 'ban', 'warn', 'delete_post'].includes(item.action))
+                );
             return (
               <TouchableOpacity 
                 style={[styles.card, { backgroundColor: theme.colors.surface }, item.is_undone && { opacity: 0.5 }]}
-                onPress={() => {
+                onPress={async () => {
                   if (item.target_type === 'post') {
-                    useFeedHighlightStore.getState().setHighlightedPost(item.target_id);
-                    router.push('/');
+                    const { data: post } = await supabase.from('rposts').select('*, rusers(*)').eq('id', item.target_id).maybeSingle();
+                    if (post) { setPreviewPost(post); }
+                    else { useFeedHighlightStore.getState().setHighlightedPost(item.target_id); router.push('/'); }
+                  } else if (item.target_type === 'user' && item.action === 'delete_post') {
+                    const rm = item.reason?.match(/report\s+(\d+)/i);
+                    if (rm) {
+                      const { data: rpt } = await supabase.from('rreports').select('target_id, target_type, post_id').eq('id', rm[1]).maybeSingle();
+                      const pid = rpt?.target_type === 'post' ? rpt.target_id : rpt?.post_id;
+                      if (pid) { const { data: p } = await supabase.from('rposts').select('*, rusers(*)').eq('id', pid).maybeSingle(); if (p) { setPreviewPost(p); return; } }
+                    }
+                    router.push(`/profile?userId=${item.target_id}`);
                   } else if (item.target_type === 'user') {
                     router.push(`/profile?userId=${item.target_id}`);
                   }
@@ -1847,7 +1896,7 @@ export default function ModerationAdmin() {
                   {canUndo && (
                     <TouchableOpacity 
                       style={[styles.restoreButton, { backgroundColor: theme.colors.success + '20', borderColor: theme.colors.success, marginTop: 12 }]}
-                      onPress={(e) => { e.stopPropagation(); handleUndoAction(item); }}
+                      onPress={() => handleUndoAction(item)}
                     >
                       <Undo size={16} color={theme.colors.success} />
                       <Text style={[styles.restoreText, { color: theme.colors.success }]}>UNDO ACTION</Text>
@@ -3146,6 +3195,52 @@ export default function ModerationAdmin() {
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
+              </Modal>
+
+              {/* Deleted Post Preview Modal */}
+              <Modal visible={!!previewPost} transparent animationType="slide" onRequestClose={() => setPreviewPost(null)}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 20 }}>
+                  <View style={{ backgroundColor: theme.colors.surface, borderRadius: 20, padding: 20, maxHeight: '80%' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.text }}>Post Preview</Text>
+                      <TouchableOpacity onPress={() => setPreviewPost(null)} style={{ padding: 4 }}>
+                        <X size={22} color={theme.colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                    {previewPost?.is_deleted && (
+                      <View style={{ backgroundColor: '#EF444420', borderRadius: 10, padding: 10, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <AlertCircle size={16} color="#EF4444" />
+                        <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '700' }}>This post is deleted{previewPost?.deletion_reason ? ` — ${previewPost.deletion_reason}` : ''}</Text>
+                      </View>
+                    )}
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                          {previewPost?.rusers?.avatar_url ? (
+                            <Image source={{ uri: previewPost.rusers.avatar_url }} style={{ width: 36, height: 36 }} />
+                          ) : (
+                            <Text style={{ fontSize: 18 }}>{previewPost?.rusers?.emoji_icon || '👤'}</Text>
+                          )}
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text }}>@{previewPost?.rusers?.username || 'unknown'}</Text>
+                          <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>{previewPost?.created_at ? new Date(previewPost.created_at).toLocaleString() : ''}</Text>
+                        </View>
+                      </View>
+                      {previewPost?.title ? <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>{previewPost.title}</Text> : null}
+                      {previewPost?.text ? <Text style={{ fontSize: 14, color: theme.colors.text, lineHeight: 22, marginBottom: 12 }}>{previewPost.text}</Text> : null}
+                      {previewPost?.image_url ? (
+                        <TouchableOpacity onPress={() => setExpandedImage(previewPost.image_url)}>
+                          <Image source={{ uri: previewPost.image_url }} style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 12 }} resizeMode="cover" />
+                        </TouchableOpacity>
+                      ) : null}
+                      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                        <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>Post ID: {previewPost?.id}</Text>
+                        <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>User ID: {previewPost?.user_id}</Text>
+                      </View>
+                    </ScrollView>
+                  </View>
+                </View>
               </Modal>
   
           </KeyboardAvoidingView>

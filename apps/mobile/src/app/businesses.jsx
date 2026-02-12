@@ -460,10 +460,10 @@ if (user?.id) {
 
       return (
         <Modal visible={showLinksModal} animationType="slide" transparent>
-          <BlurView intensity={100} tint={isLight ? "light" : "dark"} style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: theme.colors.background, paddingBottom: insets.bottom + 20, paddingTop: 0, paddingHorizontal: 0 }]}>
+          <BlurView intensity={100} tint={isLight ? "light" : "dark"} style={[styles.modalOverlay, { justifyContent: 'center', alignItems: 'center', backgroundColor: Platform.OS === 'web' ? undefined : 'rgba(0,0,0,0.7)' }]}>
+            <View style={[styles.modalContent, { backgroundColor: theme.colors.background, paddingBottom: insets.bottom + 20, paddingTop: 0, paddingHorizontal: 0, borderRadius: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxWidth: Platform.OS === 'web' ? 520 : '92%', width: '92%', maxHeight: '85%', borderTopWidth: 0 }]}>
               {/* Hero Image */}
-              <View style={{ height: 200, overflow: 'hidden', borderTopLeftRadius: Platform.OS === 'web' ? 24 : 40, borderTopRightRadius: Platform.OS === 'web' ? 24 : 40 }}>
+              <View style={{ height: 200, overflow: 'hidden', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
                 <Image 
                   source={{ uri: avatarUri }} 
                   style={{ width: '100%', height: '100%' }} 
@@ -482,13 +482,13 @@ if (user?.id) {
               </View>
 
               {/* Profile Info */}
-              <View style={{ paddingHorizontal: 24, marginTop: -40 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 14, marginBottom: 16 }}>
-                  <View style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: theme.colors.background, overflow: 'hidden' }}>
+              <View style={{ paddingHorizontal: 24, marginTop: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                  <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: theme.colors.border, overflow: 'hidden' }}>
                     <Image source={{ uri: avatarUri }} style={{ width: '100%', height: '100%' }} />
                   </View>
-                  <View style={{ flex: 1, paddingBottom: 4 }}>
-                    <Text style={{ fontSize: 22, fontWeight: '800', color: theme.colors.text, letterSpacing: -0.5 }}>{selectedBusiness.name}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: theme.colors.text, letterSpacing: -0.5 }}>{selectedBusiness.name}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
                       <View style={{ backgroundColor: theme.colors.primary + '20', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 }}>
                         <Text style={{ fontSize: 11, fontWeight: '700', color: theme.colors.primary }}>{selectedBusiness.category || 'Business'}</Text>

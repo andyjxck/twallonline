@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet, TextInput,
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ChevronLeft, LogOut, Shield, Info, Bell, Key, BarChart2, ChevronRight, Trash2, UserX, X, Mail, HelpCircle, FileText } from "lucide-react-native";
+import { ChevronLeft, LogOut, Shield, Info, Bell, Key, BarChart2, ChevronRight, Trash2, UserX, X, Mail, HelpCircle, FileText, Star, Briefcase, User } from "lucide-react-native";
 import { scheduleAccountDeletion } from "../utils/user";
 import { crossAlert } from "../utils/alert";
 import { toast } from 'sonner-native';
@@ -360,6 +360,64 @@ const handleSignOut = async () => {
                   />
                 </View>
               </View>
+
+              {auth?.account_type && auth.account_type !== 'personal' && (
+                <View style={styles.section}>
+                  <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>ACCOUNT IDENTITY</Text>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      try {
+                        await supabase.from('rusers').update({ active_identity: 'personal' }).eq('id', auth.id);
+                        useAuthStore.getState().setAuth({ ...auth, active_identity: 'personal' });
+                      } catch (e) { console.error(e); }
+                    }}
+                    style={[styles.item, { borderBottomColor: theme.colors.border }]}
+                  >
+                    <View style={styles.itemLeft}>
+                      <User size={20} color={auth?.active_identity === 'personal' ? '#10B981' : theme.colors.textSecondary} />
+                      <Text style={[styles.itemTitle, { color: auth?.active_identity === 'personal' ? '#10B981' : theme.colors.text }]}>Personal</Text>
+                    </View>
+                    {auth?.active_identity === 'personal' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981' }} />}
+                  </TouchableOpacity>
+                  {(auth.account_type === 'talent' || auth.account_type === 'both') && (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        try {
+                          await supabase.from('rusers').update({ active_identity: 'talent' }).eq('id', auth.id);
+                          useAuthStore.getState().setAuth({ ...auth, active_identity: 'talent' });
+                        } catch (e) { console.error(e); }
+                      }}
+                      style={[styles.item, { borderBottomColor: theme.colors.border }]}
+                    >
+                      <View style={styles.itemLeft}>
+                        <Star size={20} color={auth?.active_identity === 'talent' ? '#F59E0B' : theme.colors.textSecondary} />
+                        <Text style={[styles.itemTitle, { color: auth?.active_identity === 'talent' ? '#F59E0B' : theme.colors.text }]}>Talent</Text>
+                      </View>
+                      {auth?.active_identity === 'talent' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#F59E0B' }} />}
+                    </TouchableOpacity>
+                  )}
+                  {(auth.account_type === 'business' || auth.account_type === 'both') && (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        try {
+                          await supabase.from('rusers').update({ active_identity: 'business' }).eq('id', auth.id);
+                          useAuthStore.getState().setAuth({ ...auth, active_identity: 'business' });
+                        } catch (e) { console.error(e); }
+                      }}
+                      style={[styles.item, { borderBottomColor: theme.colors.border }]}
+                    >
+                      <View style={styles.itemLeft}>
+                        <Briefcase size={20} color={auth?.active_identity === 'business' ? '#8B5CF6' : theme.colors.textSecondary} />
+                        <Text style={[styles.itemTitle, { color: auth?.active_identity === 'business' ? '#8B5CF6' : theme.colors.text }]}>Business</Text>
+                      </View>
+                      {auth?.active_identity === 'business' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#8B5CF6' }} />}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
 
               <View style={styles.section}>
                 <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>LOCATION</Text>

@@ -13,7 +13,7 @@ import {
   Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera, MapPin, User, ChevronDown, Bold, Italic, Underline } from "lucide-react-native";
+import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera, MapPin, User, ChevronDown, Bold, Italic, Underline, Star, Briefcase } from "lucide-react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -68,6 +68,8 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
 
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [postingAs, setPostingAs] = useState('personal');
+  const [showcaseInfo, setShowcaseInfo] = useState(null);
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 });
 
   const { city_id, zone_id, feedView } = useLocationStore();
@@ -99,7 +101,21 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
   useEffect(() => {
     checkNetworkStatus().then(setIsOnline);
     getDeviceId().then(setDeviceId);
-    getStoredUser().then(setUser);
+    getStoredUser().then(u => {
+      setUser(u);
+      if (u?.active_identity) setPostingAs(u.active_identity);
+      // Pre-fetch showcase info
+      if (u?.talent_showcase_id) {
+        supabase.from('rtalent').select('name, avatar_url').eq('id', u.talent_showcase_id).single().then(({ data }) => {
+          if (data) setShowcaseInfo(prev => ({ ...prev, talent: data }));
+        });
+      }
+      if (u?.business_showcase_id) {
+        supabase.from('rbusinesses').select('name, avatar_url').eq('id', u.business_showcase_id).single().then(({ data }) => {
+          if (data) setShowcaseInfo(prev => ({ ...prev, business: data }));
+        });
+      }
+    });
     fetchData();
     if (postId) fetchPostData();
     fetchMyGroups();
@@ -263,6 +279,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
         city_id: city_id,
         cta_type: ctaType,
         cta_group_id: ctaGroupId,
+        posted_as_identity: isAnonymous ? 'personal' : postingAs,
       };
 
       if (postId) await supabase.from('rposts').update(dbPostData).eq('id', postId);
@@ -632,6 +649,8 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
                   >
                     {isAnonymous ? (
                       <Shield size={20} color="rgba(255,255,255,0.7)" />
+                    ) : (postingAs !== 'personal' && showcaseInfo?.[postingAs]?.avatar_url) ? (
+                      <Image source={{ uri: showcaseInfo[postingAs].avatar_url }} style={{ width: 40, height: 40, borderRadius: 20 }} />
                     ) : user?.avatar_url ? (
                       <Image source={{ uri: user.avatar_url }} style={{ width: 40, height: 40, borderRadius: 20 }} />
                     ) : (
@@ -647,7 +666,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                     >
                       <Text style={[styles.inlineHeaderName, { color: theme.colors.text }]}>
-                        {isAnonymous ? 'Anonymous' : (user?.username || 'Anonymous')}
+                        {isAnonymous ? 'Anonymous' : (postingAs !== 'personal' && showcaseInfo?.[postingAs]?.name) ? showcaseInfo[postingAs].name : (user?.username || 'Anonymous')}
                       </Text>
                       <View style={[styles.anonBadge, { backgroundColor: isAnonymous ? theme.colors.primary : 'rgba(255,255,255,0.1)' }]}>
                         <Shield size={10} color={isAnonymous ? '#000' : 'rgba(255,255,255,0.4)'} />
@@ -662,6 +681,27 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
                       <TouchableOpacity onPress={() => setShowTagDropdown(true)} style={styles.inlineMetaBtn}>
                         <Text style={[styles.inlineMetaText, { color: theme.colors.textSecondary }]}>#{selectedTag?.name || 'tag'}</Text>
                       </TouchableOpacity>
+                      {!isAnonymous && user?.account_type && user.account_type !== 'personal' && (
+                        <>
+                          <Text style={{ color: 'rgba(255,255,255,0.3)' }}>·</Text>
+                          <TouchableOpacity
+                            onPress={() => {
+                              const identities = ['personal'];
+                              if (user.account_type === 'talent' || user.account_type === 'both') identities.push('talent');
+                              if (user.account_type === 'business' || user.account_type === 'both') identities.push('business');
+                              const idx = identities.indexOf(postingAs);
+                              setPostingAs(identities[(idx + 1) % identities.length]);
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            }}
+                            style={[styles.inlineMetaBtn, { backgroundColor: postingAs === 'talent' ? '#F59E0B30' : postingAs === 'business' ? '#8B5CF630' : '#10B98130', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }]}
+                          >
+                            {postingAs === 'talent' ? <Star size={10} color="#F59E0B" /> : postingAs === 'business' ? <Briefcase size={10} color="#8B5CF6" /> : <User size={10} color="#10B981" />}
+                            <Text style={[styles.inlineMetaText, { color: postingAs === 'talent' ? '#F59E0B' : postingAs === 'business' ? '#8B5CF6' : '#10B981', fontWeight: '700' }]}>
+                              {postingAs === 'talent' ? 'Talent' : postingAs === 'business' ? 'Business' : 'Personal'}
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -697,6 +737,33 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
                   <Shield size={14} color={isAnonymous ? "#000" : "rgba(255,255,255,0.5)"} />
                   <Text style={[styles.anonToggleText, { color: isAnonymous ? "#000" : "rgba(255,255,255,0.6)" }]}>Anon</Text>
                 </TouchableOpacity>
+
+                {!isAnonymous && user?.account_type && user.account_type !== 'personal' && (
+                  <View style={{ flexDirection: 'row', gap: 4 }}>
+                    <TouchableOpacity
+                      onPress={() => { setPostingAs('personal'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                      style={[styles.anonToggle, postingAs === 'personal' && { backgroundColor: '#10B981' }]}
+                    >
+                      <User size={14} color={postingAs === 'personal' ? '#000' : 'rgba(255,255,255,0.5)'} />
+                    </TouchableOpacity>
+                    {(user.account_type === 'talent' || user.account_type === 'both') && (
+                      <TouchableOpacity
+                        onPress={() => { setPostingAs('talent'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                        style={[styles.anonToggle, postingAs === 'talent' && { backgroundColor: '#F59E0B' }]}
+                      >
+                        <Star size={14} color={postingAs === 'talent' ? '#000' : 'rgba(255,255,255,0.5)'} />
+                      </TouchableOpacity>
+                    )}
+                    {(user.account_type === 'business' || user.account_type === 'both') && (
+                      <TouchableOpacity
+                        onPress={() => { setPostingAs('business'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                        style={[styles.anonToggle, postingAs === 'business' && { backgroundColor: '#8B5CF6' }]}
+                      >
+                        <Briefcase size={14} color={postingAs === 'business' ? '#000' : 'rgba(255,255,255,0.5)'} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
             </View>
           )}
