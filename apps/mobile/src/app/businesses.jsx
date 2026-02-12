@@ -386,8 +386,8 @@ if (user?.id) {
       }
     };
 
-    const LinksManager = ({ links: rawLinks, isEdit = false }) => {
-      const links = Array.isArray(rawLinks) ? rawLinks : [];
+    const renderLinksManager = (links, isEdit) => {
+      const safeLinks = Array.isArray(links) ? links : [];
       return (
       <View style={styles.linksManagerContainer}>
         <View style={styles.linksHeader}>
@@ -396,7 +396,7 @@ if (user?.id) {
             <Plus size={14} color={isLight ? '#FFF' : '#000'} />
           </TouchableOpacity>
         </View>
-        {links.map((link, index) => (
+        {safeLinks.map((link, index) => (
           <View key={link.id} style={[styles.linkCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <View style={styles.linkCardHeader}>
               <LinkIcon size={16} color={theme.colors.primary} />
@@ -428,7 +428,7 @@ if (user?.id) {
             />
           </View>
         ))}
-        {(!links || links.length === 0) && (
+        {safeLinks.length === 0 && (
           <Text style={{ fontSize: 11, color: theme.colors.textSecondary, fontStyle: 'italic', marginTop: 4 }}>
             No additional links added yet.
           </Text>
@@ -1289,7 +1289,7 @@ if (user?.id) {
                     })}
                   </View>
 
-                  <LinksManager links={form.links} isEdit={false} />
+                  {renderLinksManager(form.links, false)}
   
                   <TouchableOpacity 
                     style={[styles.submitButton, { backgroundColor: theme.colors.primary }]} 
@@ -1449,7 +1449,7 @@ if (user?.id) {
                   })}
                 </View>
 
-                <LinksManager links={editForm?.links} isEdit={true} />
+                {renderLinksManager(editForm?.links, true)}
 
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 40 }}>
                   <TouchableOpacity 
