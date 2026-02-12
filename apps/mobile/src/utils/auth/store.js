@@ -49,6 +49,7 @@ export const useChatStore = create((set) => ({
   pendingCallId: null, // Call ID from notification
   isCallMinimized: false,
   bubbleHidden: false,
+  dockCollapsed: false,
   open: (chatId = null) => set({ isOpen: true, activeChatId: chatId }),
   close: () => set({ isOpen: false, activeChatId: null, pendingCallUserId: null, pendingCallAction: null, pendingCallId: null }),
   toggle: () => set((state) => ({ isOpen: !state.isOpen })),
@@ -58,6 +59,7 @@ export const useChatStore = create((set) => ({
   setMinimized: (minimized) => set({ isCallMinimized: minimized }),
   clearPendingCall: () => set({ pendingCallAction: null, pendingCallId: null }),
   setBubbleHidden: (hidden) => set({ bubbleHidden: hidden }),
+  setDockCollapsed: (collapsed) => set({ dockCollapsed: collapsed }),
 }));
 
 /**

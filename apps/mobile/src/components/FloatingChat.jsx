@@ -108,6 +108,7 @@ export default function FloatingChat() {
     pendingCallAction,
     pendingCallId,
     clearPendingCall,
+    dockCollapsed,
   } = useChatStore();
 const { auth: user } = useAuthStore();
 const insets = useSafeAreaInsets();
@@ -2570,7 +2571,7 @@ useEffect(() => {
   };
 
   return (
-    <View style={[styles.container, isOpen && styles.containerOpen, isOpen && Platform.OS === 'web' && { left: (typeof window !== 'undefined' && window.innerWidth >= 768) ? 72 : 0 }, !isOpen && styles.containerClosed]} pointerEvents="box-none">
+    <View style={[styles.container, isOpen && styles.containerOpen, isOpen && Platform.OS === 'web' && { left: (typeof window !== 'undefined' && window.innerWidth >= 768 && !dockCollapsed) ? 72 : 0 }, !isOpen && styles.containerClosed]} pointerEvents="box-none">
         <FullscreenMediaModal />
         {!isOpen && isVisible && (
           <Animated.View 

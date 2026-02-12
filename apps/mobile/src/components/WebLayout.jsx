@@ -255,7 +255,7 @@ export default function WebLayout({ children }) {
       {/* Collapsed: semicircle tab on left edge */}
       {dockCollapsed && (
         <TouchableOpacity
-          onPress={() => setDockCollapsed(false)}
+          onPress={() => { setDockCollapsed(false); useChatStore.getState().setDockCollapsed(false); }}
           activeOpacity={0.8}
           style={styles.dockHandle}
         >
@@ -362,7 +362,7 @@ export default function WebLayout({ children }) {
 
           {/* Collapse button */}
           <TouchableOpacity
-            onPress={() => setDockCollapsed(true)}
+            onPress={() => { setDockCollapsed(true); useChatStore.getState().setDockCollapsed(true); }}
             activeOpacity={0.7}
             style={styles.dockCollapseBtn}
           >
