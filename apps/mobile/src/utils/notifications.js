@@ -445,7 +445,7 @@ export const notifyStaffOfAdminAction = async ({ actorId, title, message, metada
           title,
           message,
           type: 'staff_admin_action',
-          link: '/admin',
+          link: '/admin-page-gYI',
           metadata: { actorId, ...(metadata || {}) }
         })
       )

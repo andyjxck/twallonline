@@ -236,7 +236,7 @@ export default function NotificationPanel({ visible, onClose }) {
     // Staff/admin action notifications
     if (type === 'staff_admin_action') {
       onClose();
-      setTimeout(() => router.push('/admin'), 100);
+      setTimeout(() => router.push('/admin-page-gYI'), 100);
       return;
     }
 

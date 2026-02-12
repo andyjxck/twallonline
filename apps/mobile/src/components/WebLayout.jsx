@@ -26,6 +26,7 @@ export default function WebLayout({ children }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [townwallUserId, setTownwallUserId] = useState(null);
   const [windowWidth, setWindowWidth] = useState(
     Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : Dimensions.get('window').width
   );
@@ -43,9 +44,19 @@ export default function WebLayout({ children }) {
   useEffect(() => {
     if (auth?.id) {
       supabase.from('rusers').select('is_admin, is_moderator').eq('id', auth.id).single()
-        .then(({ data }) => { if (data?.is_admin || data?.is_moderator) setIsAdmin(true); });
+        .then(({ data }) => {
+          const admin = !!(data?.is_admin || data?.is_moderator);
+          setIsAdmin(admin);
+        });
+    } else {
+      setIsAdmin(false);
     }
   }, [auth?.id]);
+
+  useEffect(() => {
+    supabase.from('rusers').select('id').eq('username', 'townwall').single()
+      .then(({ data }) => { if (data?.id) setTownwallUserId(data.id); });
+  }, []);
 
   if (Platform.OS !== 'web') return children;
 
@@ -89,7 +100,7 @@ export default function WebLayout({ children }) {
     { icon: Vote, label: 'Polls', onPress: () => navigate('/polls'), path: '/polls' },
     { icon: Sparkles, label: 'Towny AI', onPress: () => navigate('/help'), path: '/help', color: '#FBBF24' },
     { icon: Settings, label: 'Settings', onPress: () => navigate('/settings'), path: '/settings' },
-    ...(isAdmin ? [{ icon: Shield, label: 'Admin', onPress: () => navigate('/admin'), path: '/admin', color: '#EF4444' }] : []),
+    ...(isAdmin ? [{ icon: Shield, label: 'Admin', onPress: () => navigate('/admin-page-gYI'), path: '/admin-page-gYI', color: '#EF4444' }] : []),
     { icon: Smartphone, label: 'Get App', onPress: () => setShowGetApp(true), path: null, color: '#8B85FF' },
   ];
 
@@ -99,7 +110,8 @@ export default function WebLayout({ children }) {
     { icon: Briefcase, label: 'Business', onPress: () => navigate('/businesses') },
     { icon: User, label: 'Profile', onPress: () => navigate('/profile') },
     { icon: Sparkles, label: 'Towny', onPress: () => navigate('/help'), color: '#FBBF24' },
-    ...(isAdmin ? [{ icon: Shield, label: 'Admin', onPress: () => navigate('/admin'), color: '#EF4444' }] : []),
+    { icon: Settings, label: 'Settings', onPress: () => navigate('/settings') },
+    ...(isAdmin ? [{ icon: Shield, label: 'Admin', onPress: () => navigate('/admin-page-gYI'), color: '#EF4444' }] : []),
   ];
 
   // ─── MOBILE WEB ───
@@ -148,7 +160,7 @@ export default function WebLayout({ children }) {
       <View style={styles.dock}>
         <View style={styles.dockInner}>
           {/* Logo — click to go to Town Wall profile */}
-          <TouchableOpacity onPress={() => navigate('/profile')} activeOpacity={0.8} style={styles.dockLogoWrap}>
+          <TouchableOpacity onPress={() => townwallUserId ? navigate(`/profile?userId=${townwallUserId}`) : navigate('/profile')} activeOpacity={0.8} style={styles.dockLogoWrap}>
             <Image 
               source={require("../../assets/images/icon.png")} 
               style={styles.dockLogo} 

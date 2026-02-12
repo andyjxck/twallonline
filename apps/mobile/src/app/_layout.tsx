@@ -221,7 +221,7 @@ function LayoutWithTheme() {
         <Stack.Screen name="help" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="settings" />
-        <Stack.Screen name="admin" />
+        <Stack.Screen name="admin-page-gYI" />
         <Stack.Screen name="onboarding/welcome" />
         <Stack.Screen name="onboarding/zones" />
         <Stack.Screen

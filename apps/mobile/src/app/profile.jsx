@@ -925,7 +925,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                 </View>
 
               {user?.is_admin && (
-                <TouchableOpacity onPress={() => router.push('/admin')} style={[styles.adminBadge, { backgroundColor: theme.colors.primary }]}>
+                <TouchableOpacity onPress={() => router.push('/admin-page-gYI')} style={[styles.adminBadge, { backgroundColor: theme.colors.primary }]}>
                   <Shield size={12} color={isLight ? "#FFF" : "#000"} />
                   <Text style={[styles.adminText, { color: isLight ? "#FFF" : "#000" }]}>MOD</Text>
                 </TouchableOpacity>

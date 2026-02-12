@@ -490,7 +490,7 @@ if (isOnline) syncPendingPosts();
                     <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/talent"), 100); }} style={styles.menuItem}><Star size={20} color={theme.colors.text} /><Text style={styles.menuText}>Local Talent</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/businesses"), 100); }} style={styles.menuItem}><Briefcase size={20} color={theme.colors.text} /><Text style={styles.menuText}>Local Business</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/polls"), 100); }} style={styles.menuItem}><Vote size={20} color={theme.colors.text} /><Text style={styles.menuText}>Polls & Features</Text></TouchableOpacity>
-                    {isModerator && <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/admin"), 100); }} style={styles.menuItem}><Shield size={20} color={theme.colors.error} /><Text style={styles.menuText}>Admin</Text></TouchableOpacity>}
+                    {isModerator && <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/admin-page-gYI"), 100); }} style={styles.menuItem}><Shield size={20} color={theme.colors.error} /><Text style={styles.menuText}>Admin</Text></TouchableOpacity>}
                     <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/help"), 100); }} style={styles.menuItem}><Sparkles size={20} color="#FBBF24" /><Text style={styles.menuText}>Towny</Text></TouchableOpacity>
                   </View>
                 </MotiView>

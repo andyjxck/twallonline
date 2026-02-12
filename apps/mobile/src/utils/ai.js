@@ -182,7 +182,7 @@ MAIN FEATURES:
 
 NAVIGATION / UI NOTES:
 • Feed header has a location dropdown (Global/City/Zone)
-• Notifications open a dropdown/panel; staff/admin alerts can route to /admin
+• Notifications open a dropdown/panel; staff/admin alerts can route to the admin page
 • Chat includes DMs + group chats + calls
 • Settings includes account/security options like recovery codes
 
