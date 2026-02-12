@@ -281,6 +281,22 @@ export default function WebLayout({ children }) {
 
           <View style={styles.dockDivider} />
 
+          {/* Profile icon in dock */}
+          {auth?.id && (
+            <TouchableOpacity
+              onPress={() => navigate('/profile')}
+              onLongPress={() => setShowProfileMenu(v => !v)}
+              activeOpacity={0.7}
+              style={styles.dockProfileBtn}
+            >
+              {userAvatar ? (
+                <Image source={{ uri: userAvatar }} style={styles.dockProfileImg} />
+              ) : (
+                <Text style={{ fontSize: 16 }}>{userEmoji || '👤'}</Text>
+              )}
+            </TouchableOpacity>
+          )}
+
           {/* Collapse button */}
           <TouchableOpacity
             onPress={() => setDockCollapsed(true)}
@@ -293,57 +309,38 @@ export default function WebLayout({ children }) {
       </View>
       )}
 
-      {/* Profile icon — top right */}
-      {auth?.id && (
-        <View style={styles.topRightBar}>
-          <TouchableOpacity
-            onPress={() => navigate('/profile')}
-            onLongPress={() => setShowProfileMenu(v => !v)}
-            activeOpacity={0.7}
-            style={styles.profileIconBtn}
-          >
-            {userAvatar ? (
-              <Image source={{ uri: userAvatar }} style={styles.profileIconImg} />
-            ) : (
-              <Text style={styles.profileIconEmoji}>{userEmoji || '👤'}</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Profile long-press menu */}
-          {showProfileMenu && (
-            <View style={styles.profileDropdown}>
-              {/* Identity Switcher */}
-              {auth?.account_type && auth.account_type !== 'personal' && (
-                <>
-                  <Text style={styles.profileDropdownLabel}>SWITCH IDENTITY</Text>
-                  <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('personal')}>
-                    <User size={16} color={auth?.active_identity === 'personal' ? '#10B981' : 'rgba(255,255,255,0.7)'} />
-                    <Text style={[styles.submenuText, auth?.active_identity === 'personal' && { color: '#10B981' }]}>Personal</Text>
-                    {auth?.active_identity === 'personal' && <Text style={{ color: '#10B981', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
-                  </TouchableOpacity>
-                  {(auth.account_type === 'business' || auth.account_type === 'both') && (
-                    <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('business')}>
-                      <Briefcase size={16} color={auth?.active_identity === 'business' ? '#8B5CF6' : 'rgba(255,255,255,0.7)'} />
-                      <Text style={[styles.submenuText, auth?.active_identity === 'business' && { color: '#8B5CF6' }]}>Business</Text>
-                      {auth?.active_identity === 'business' && <Text style={{ color: '#8B5CF6', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
-                    </TouchableOpacity>
-                  )}
-                  {(auth.account_type === 'talent' || auth.account_type === 'both') && (
-                    <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('talent')}>
-                      <Star size={16} color={auth?.active_identity === 'talent' ? '#F59E0B' : 'rgba(255,255,255,0.7)'} />
-                      <Text style={[styles.submenuText, auth?.active_identity === 'talent' && { color: '#F59E0B' }]}>Talent</Text>
-                      {auth?.active_identity === 'talent' && <Text style={{ color: '#F59E0B', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
-                    </TouchableOpacity>
-                  )}
-                  <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 6 }} />
-                </>
-              )}
-              <TouchableOpacity style={styles.submenuItem} onPress={() => { handleSignOut(); setShowProfileMenu(false); }}>
-                <LogOut size={16} color="#EF4444" />
-                <Text style={[styles.submenuText, { color: '#EF4444' }]}>Sign Out</Text>
+      {/* Profile menu popout - rendered at root level */}
+      {showProfileMenu && (
+        <View style={styles.profileDropdownFixed}>
+          {auth?.account_type && auth.account_type !== 'personal' && (
+            <>
+              <Text style={styles.profileDropdownLabel}>SWITCH IDENTITY</Text>
+              <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('personal')}>
+                <User size={16} color={auth?.active_identity === 'personal' ? '#10B981' : 'rgba(255,255,255,0.7)'} />
+                <Text style={[styles.submenuText, auth?.active_identity === 'personal' && { color: '#10B981' }]}>Personal</Text>
+                {auth?.active_identity === 'personal' && <Text style={{ color: '#10B981', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
               </TouchableOpacity>
-            </View>
+              {(auth.account_type === 'business' || auth.account_type === 'both') && (
+                <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('business')}>
+                  <Briefcase size={16} color={auth?.active_identity === 'business' ? '#8B5CF6' : 'rgba(255,255,255,0.7)'} />
+                  <Text style={[styles.submenuText, auth?.active_identity === 'business' && { color: '#8B5CF6' }]}>Business</Text>
+                  {auth?.active_identity === 'business' && <Text style={{ color: '#8B5CF6', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                </TouchableOpacity>
+              )}
+              {(auth.account_type === 'talent' || auth.account_type === 'both') && (
+                <TouchableOpacity style={styles.submenuItem} onPress={() => handleSwitchIdentity('talent')}>
+                  <Star size={16} color={auth?.active_identity === 'talent' ? '#F59E0B' : 'rgba(255,255,255,0.7)'} />
+                  <Text style={[styles.submenuText, auth?.active_identity === 'talent' && { color: '#F59E0B' }]}>Talent</Text>
+                  {auth?.active_identity === 'talent' && <Text style={{ color: '#F59E0B', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                </TouchableOpacity>
+              )}
+              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 6 }} />
+            </>
           )}
+          <TouchableOpacity style={styles.submenuItem} onPress={() => { handleSignOut(); setShowProfileMenu(false); }}>
+            <LogOut size={16} color="#EF4444" />
+            <Text style={[styles.submenuText, { color: '#EF4444' }]}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -557,36 +554,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // ─── Top Right Profile ───
-  topRightBar: {
-    position: 'fixed',
-    top: 8,
-    right: 12,
-    zIndex: 999,
-    alignItems: 'flex-end',
-    pointerEvents: 'box-none',
-  },
-  profileIconBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(20,20,30,0.7)',
+  // ─── Dock Profile Button ───
+  dockProfileBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     cursor: 'pointer',
-    opacity: 0.6,
-    pointerEvents: 'auto',
   },
-  profileIconImg: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  profileIconEmoji: {
-    fontSize: 14,
+  dockProfileImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   profileDropdownLabel: {
     fontSize: 9,
@@ -596,6 +580,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 4,
+  },
+  profileDropdownFixed: {
+    position: 'fixed',
+    bottom: 80,
+    left: 80,
+    backgroundColor: 'rgba(20,20,30,0.95)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    minWidth: 180,
+    zIndex: 2000,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   profileDropdown: {
     marginTop: 8,

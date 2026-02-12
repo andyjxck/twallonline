@@ -337,12 +337,12 @@ useEffect(() => {
           Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 300,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
           Animated.timing(slideAnim, {
             toValue: 0,
             duration: 300,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
         ]).start();
       } else {
@@ -350,12 +350,12 @@ useEffect(() => {
           Animated.timing(fadeAnim, {
             toValue: 0,
             duration: 250,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
           Animated.timing(slideAnim, {
             toValue: height,
             duration: 250,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
         ]).start();
       }
@@ -3372,7 +3372,7 @@ useEffect(() => {
           >
           </TouchableOpacity>
           
-            <Animated.View style={[styles.chatWindow, { transform: [{ translateY: slideAnim }] }]}>
+            <Animated.View style={[styles.chatWindow, { transform: [{ translateY: slideAnim }], zIndex: 10 }]}>
               <View style={[styles.chatHeader, { paddingTop: Platform.OS === 'web' ? 16 : insets.top + 8 }]}>
 
                   {showChatList ? (
