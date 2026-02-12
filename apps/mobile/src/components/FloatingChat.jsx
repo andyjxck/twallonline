@@ -126,16 +126,34 @@ const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const bubblePos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const lastBubblePos = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const bubblePanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5,
       onPanResponderGrant: () => { isDragging.current = true; },
-      onPanResponderMove: Animated.event([null, { dx: bubblePos.x, dy: bubblePos.y }], { useNativeDriver: false }),
+      onPanResponderMove: (_, g) => {
+        bubblePos.setValue({ x: lastBubblePos.current.x + g.dx, y: lastBubblePos.current.y + g.dy });
+      },
       onPanResponderRelease: (_, g) => {
-        bubblePos.flattenOffset();
-        bubblePos.extractOffset();
+        const screenW = Dimensions.get('window').width;
+        const screenH = Dimensions.get('window').height;
+        const bubbleSize = 56;
+        const defaultRight = 20;
+        const defaultBottom = 110;
+        const anchorX = screenW - defaultRight - bubbleSize;
+        const anchorY = screenH - defaultBottom - bubbleSize;
+        let newX = lastBubblePos.current.x + g.dx;
+        let newY = lastBubblePos.current.y + g.dy;
+        const absX = anchorX + newX;
+        const absY = anchorY + newY;
+        const clampedAbsX = Math.max(10, Math.min(absX, screenW - bubbleSize - 10));
+        const clampedAbsY = Math.max(60, Math.min(absY, screenH - bubbleSize - 80));
+        newX = clampedAbsX - anchorX;
+        newY = clampedAbsY - anchorY;
+        lastBubblePos.current = { x: newX, y: newY };
+        Animated.spring(bubblePos, { toValue: { x: newX, y: newY }, useNativeDriver: false, friction: 7 }).start();
         setTimeout(() => { isDragging.current = false; }, 50);
       },
     })
@@ -3837,10 +3855,12 @@ const styles = StyleSheet.create({
     boxShadow: 'none',
     backgroundColor: 'transparent',
     borderColor: 'transparent',
-    height: 180, // Enough for the bubble higher up
-    width: 100,
-    bottom: 0,
+    top: 0,
+    left: 0,
     right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   fixedBubbleContainer: {
     position: 'absolute',
