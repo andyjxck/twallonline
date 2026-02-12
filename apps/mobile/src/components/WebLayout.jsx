@@ -197,12 +197,40 @@ export default function WebLayout({ children }) {
               style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}
             />
             <View style={styles.mobilePopup}>
-              {mobileNavItems.filter(item => !['Feed', 'Talent', 'Business', 'Profile'].includes(item.label)).map((item, i) => (
+              {mobileNavItems.filter(item => !['Feed', 'Talent', 'Business', 'Settings'].includes(item.label)).map((item, i) => (
                 <TouchableOpacity key={i} onPress={item.onPress} style={styles.mobilePopupItem} activeOpacity={0.7}>
                   <item.icon size={16} color={item.color || 'rgba(255,255,255,0.7)'} />
                   <Text style={[styles.mobilePopupText, item.color && { color: item.color }]}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
+
+              {/* Identity switcher */}
+              {auth?.account_type && auth.account_type !== 'personal' && (
+                <>
+                  <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 4 }} />
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', paddingHorizontal: 12, paddingTop: 6, paddingBottom: 2, letterSpacing: 0.5 }}>SWITCH IDENTITY</Text>
+                  <TouchableOpacity style={styles.mobilePopupItem} onPress={() => { handleSwitchIdentity('personal'); setMobileNavOpen(false); }} activeOpacity={0.7}>
+                    <User size={16} color={auth?.active_identity === 'personal' ? '#10B981' : 'rgba(255,255,255,0.7)'} />
+                    <Text style={[styles.mobilePopupText, auth?.active_identity === 'personal' && { color: '#10B981' }]}>Personal</Text>
+                    {auth?.active_identity === 'personal' && <Text style={{ color: '#10B981', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                  </TouchableOpacity>
+                  {(auth.account_type === 'business' || auth.account_type === 'both') && (
+                    <TouchableOpacity style={styles.mobilePopupItem} onPress={() => { handleSwitchIdentity('business'); setMobileNavOpen(false); }} activeOpacity={0.7}>
+                      <Briefcase size={16} color={auth?.active_identity === 'business' ? '#8B5CF6' : 'rgba(255,255,255,0.7)'} />
+                      <Text style={[styles.mobilePopupText, auth?.active_identity === 'business' && { color: '#8B5CF6' }]}>Business</Text>
+                      {auth?.active_identity === 'business' && <Text style={{ color: '#8B5CF6', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                    </TouchableOpacity>
+                  )}
+                  {(auth.account_type === 'talent' || auth.account_type === 'both') && (
+                    <TouchableOpacity style={styles.mobilePopupItem} onPress={() => { handleSwitchIdentity('talent'); setMobileNavOpen(false); }} activeOpacity={0.7}>
+                      <Star size={16} color={auth?.active_identity === 'talent' ? '#F59E0B' : 'rgba(255,255,255,0.7)'} />
+                      <Text style={[styles.mobilePopupText, auth?.active_identity === 'talent' && { color: '#F59E0B' }]}>Talent</Text>
+                      {auth?.active_identity === 'talent' && <Text style={{ color: '#F59E0B', fontSize: 10, marginLeft: 'auto' }}>✓</Text>}
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+
               <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 4 }} />
               <TouchableOpacity onPress={() => navigate('/settings')} style={styles.mobilePopupItem} activeOpacity={0.7}>
                 <Settings size={16} color="rgba(255,255,255,0.7)" />
