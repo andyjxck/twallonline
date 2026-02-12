@@ -3377,16 +3377,15 @@ useEffect(() => {
 
                   {showChatList ? (
                     <View style={styles.headerNav}>
-                      <Text style={styles.headerTitle}>Messages</Text>
-                      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                        <TouchableOpacity onPress={() => setShowNewGroupModal(true)} style={styles.iconBtn}>
-                          <Users size={20} color="#FFF" />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <TouchableOpacity onPress={() => setClose()} style={{ padding: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                          <X size={22} color="#FFF" />
                         </TouchableOpacity>
-                        <View style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)', marginLeft: 4 }} />
-                        <TouchableOpacity onPress={() => setClose()} style={styles.iconBtn}>
-                          <X size={24} color="#FFF" />
-                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Messages</Text>
                       </View>
+                      <TouchableOpacity onPress={() => setShowNewGroupModal(true)} style={styles.iconBtn}>
+                        <Users size={20} color="#FFF" />
+                      </TouchableOpacity>
                     </View>
                   ) : (
                   <View style={styles.headerNav}>
