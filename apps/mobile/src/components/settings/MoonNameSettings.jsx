@@ -12,6 +12,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/utils/supabase";
 import { crossAlert } from "@/utils/alert";
+import { toast } from 'sonner-native';
 
 export function MoonNameSettings({
   moonName,
@@ -33,7 +34,7 @@ export function MoonNameSettings({
       const newName = tempMoonName.trim();
 
       if (!newName) {
-        crossAlert("Name Required", "Please enter a name for your moon.");
+        toast.error("Please enter a name for your moon.");
         return;
       }
 
@@ -45,10 +46,10 @@ export function MoonNameSettings({
       if (error) throw error;
 
       onSave(); // updates state in useSettings
-      crossAlert("Success", "Your moon's name has been updated.");
+      toast.success("Your moon's name has been updated.");
     } catch (err) {
       console.error("Error saving moon name:", err);
-      crossAlert("Save Failed", "Could not update moon name.");
+      toast.error("Could not update moon name.");
     } finally {
       setSaving(false);
     }

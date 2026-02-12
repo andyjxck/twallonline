@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { crossAlert } from '@/utils/alert';
+import { toast } from 'sonner-native';
 import { ChevronLeft, User, Key } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import bcrypt from 'bcryptjs';
@@ -44,7 +45,7 @@ export default function ForgotPassword() {
     const trimmedCode = recoveryCode.trim();
 
     if (!trimmedUsername || !trimmedCode) {
-      crossAlert("Error", "Please enter both your username and recovery code");
+      toast.error("Please enter both your username and recovery code");
       return;
     }
 
@@ -57,16 +58,13 @@ export default function ForgotPassword() {
       if (result.success) {
         useAuthStore.getState().setAuth(result.user);
         await initUser();
-        crossAlert(
-          "Success", 
-          "Account recovered successfully! Please update your password in settings.",
-          [{ text: "OK", onPress: () => router.replace("/") }]
-        );
+        toast.success("Account recovered! Please update your password in settings.");
+        router.replace("/");
       } else {
-        crossAlert("Error", result.message || "Invalid username or recovery code");
+        toast.error(result.message || "Invalid username or recovery code");
       }
     } catch (error) {
-      crossAlert("Error", "Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
       console.error(error);
     } finally {
       setLoading(false);

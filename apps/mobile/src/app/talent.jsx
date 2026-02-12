@@ -19,6 +19,7 @@ import { getStoredUser } from '@/utils/user';
 import { useLocationStore } from "@/utils/locationStore";
 import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
+import { toast } from 'sonner-native';
 
 export default function LocalTalent() {
   const { theme, isHippie, isLight } = useTheme();
@@ -178,7 +179,7 @@ if (user?.id) {
     }
 
     if (!form.name || !form.title || !form.link) {
-      crossAlert("Required", "Please fill in your name, title, and link.");
+      toast.error("Please fill in your name, title, and link.");
       return;
     }
 
@@ -219,7 +220,7 @@ if (user?.id) {
     } catch (e) {
       console.error('RevenueCat Error:', e);
       if (!e.userCancelled) {
-        crossAlert("Payment Error", "There was a problem with the App Store.");
+        toast.error("There was a problem with the App Store.");
       }
       setSubmitting(false);
     }
@@ -436,12 +437,12 @@ const { error } = await supabase
 
       if (error) throw error;
       
-      crossAlert("Submitted!", "Your talent has been submitted for moderation. It will appear on the feed once approved.");
+      toast.success("Talent submitted for moderation!");
       setShowModal(false);
       setForm({ name: '', title: '', platform: 'Youtube', link: '', description: '', category: 'Musician', avatar: null });
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to save your submission.");
+      toast.error("Failed to save your submission.");
     } finally {
       setSubmitting(false);
     }
@@ -453,10 +454,10 @@ const { error } = await supabase
       if (supported) {
         await Linking.openURL(url);
       } else {
-        crossAlert("Error", "Cannot open this link: " + url);
+        toast.error("Cannot open this link");
       }
     } catch (error) {
-      crossAlert("Error", "An error occurred while opening the link.");
+      toast.error("An error occurred while opening the link.");
     }
   };
 
@@ -515,7 +516,7 @@ const { error } = await supabase
               fetchTalents();
             } catch (error) {
               console.error(error);
-              crossAlert("Error", "Failed to delete showcase.");
+              toast.error("Failed to delete showcase.");
             } finally {
               setSubmitting(false);
             }
@@ -577,7 +578,7 @@ const { error } = await supabase
       }
 
       if (changes.length === 0) {
-        crossAlert("No Changes", "You haven't made any changes.");
+        toast.info("You haven't made any changes.");
         setSubmitting(false);
         return;
       }
@@ -596,12 +597,12 @@ const { error } = await supabase
 
       if (error) throw error;
 
-      crossAlert("Edit Submitted!", "Your changes have been submitted for moderation. They will appear once approved.");
+      toast.success("Changes submitted for moderation!");
       setShowEditModal(false);
       setEditForm(null);
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to submit your changes.");
+      toast.error("Failed to submit your changes.");
     } finally {
       setSubmitting(false);
     }

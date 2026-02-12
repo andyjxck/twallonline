@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { crossAlert } from '../utils/alert';
+import { toast } from 'sonner-native';
 import {
     Heart,
     Star,
@@ -239,7 +240,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
 
   const handleCTA = async () => {
     if (!user) {
-      crossAlert("Authentication Required", "Please sign in to use this feature.");
+      toast.error("Please sign in to use this feature.");
       return;
     }
     
@@ -249,7 +250,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
     try {
       if (item.cta_type === 'chat') {
         if (item.user_id === user.id) {
-          crossAlert("Note", "This is your own post!");
+          toast.info("This is your own post!");
           return;
         }
 
@@ -334,7 +335,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         }
     } catch (e) {
       console.error(e);
-      crossAlert("Error", "Failed to process request");
+      toast.error("Failed to process request");
     } finally {
       setCtaLoading(false);
     }
@@ -522,11 +523,11 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         setShowReportModal(false);
         setReportReason("");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        crossAlert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
+        toast.success("Report submitted. Our team will review it within 24 hours.");
       }
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to submit report. Please try again.");
+      toast.error("Failed to submit report. Please try again.");
     }
   };
 
@@ -539,11 +540,11 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         setCommentToReport(null);
         setCommentReportReason("");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        crossAlert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
+        toast.success("Report submitted. Our team will review it within 24 hours.");
       }
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to submit report. Please try again.");
+      toast.error("Failed to submit report. Please try again.");
     }
   };
 

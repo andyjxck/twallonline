@@ -28,6 +28,7 @@ if (Platform.OS !== 'web') {
 import { useLocationStore } from "@/utils/locationStore";
 import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
+import { toast } from 'sonner-native';
 
 const DELIVERY_PLATFORMS = [
   { id: 'amazon', name: 'Amazon', icon: ShoppingBag },
@@ -183,7 +184,7 @@ if (user?.id) {
 
     const processGoogleLink = async () => {
     if (!form.link.includes('google.com/maps') && !form.link.includes('maps.app.goo.gl')) {
-      crossAlert("Link Type", "Please enter a valid Google Maps link to auto-fill details.");
+      toast.error("Please enter a valid Google Maps link to auto-fill details.");
       return;
     }
 
@@ -286,11 +287,11 @@ if (user?.id) {
       }));
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      crossAlert("Details Extracted", "We've filled in what we could find from Google Maps!");
+      toast.success("Details extracted from Google Maps!");
 
     } catch (error) {
       console.error("Link processing error:", error);
-      crossAlert("Error", "Could not extract details. Please check the link or fill manually.");
+      toast.error("Could not extract details. Please check the link or fill manually.");
     } finally {
       setProcessingLink(false);
     }
@@ -306,7 +307,7 @@ if (user?.id) {
     }
 
     if (!form.name || !form.category) {
-      crossAlert("Required", "Please fill in the business name and category.");
+      toast.error("Please fill in the business name and category.");
       return;
     }
 
@@ -346,7 +347,7 @@ if (user?.id) {
       } catch (e) {
         console.error('RevenueCat Error:', e);
         if (!e.userCancelled) {
-          crossAlert("Payment Error", "There was a problem with the App Store.");
+          toast.error("There was a problem with the App Store.");
         }
         setSubmitting(false);
       }
@@ -622,13 +623,13 @@ if (user?.id) {
 
         if (error) throw error;
         
-        crossAlert("Submitted!", "Your business has been submitted for moderation. It will appear once approved.");
+        toast.success("Business submitted for moderation!");
         setShowModal(false);
         setForm({ name: '', category: 'Retail', link: '', address: '', phone: '', description: '', avatar: null, rating: null, delivery_links: {} });
       fetchBusinesses();
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to save business details.");
+      toast.error("Failed to save business details.");
     } finally {
       setSubmitting(false);
     }
@@ -642,7 +643,7 @@ if (user?.id) {
         await Linking.openURL(url);
       }
     } catch (error) {
-      crossAlert("Error", "Cannot open link");
+      toast.error("Cannot open link");
     }
   };
 
@@ -703,7 +704,7 @@ if (user?.id) {
               fetchBusinesses();
             } catch (error) {
               console.error(error);
-              crossAlert("Error", "Failed to delete showcase.");
+              toast.error("Failed to delete showcase.");
             } finally {
               setSubmitting(false);
             }
@@ -768,7 +769,7 @@ if (user?.id) {
       }
 
       if (changes.length === 0) {
-        crossAlert("No Changes", "You haven't made any changes.");
+        toast.info("You haven't made any changes.");
         setSubmitting(false);
         return;
       }
@@ -787,12 +788,12 @@ if (user?.id) {
 
       if (error) throw error;
 
-      crossAlert("Edit Submitted!", "Your changes have been submitted for moderation. They will appear once approved.");
+      toast.success("Changes submitted for moderation!");
       setShowEditModal(false);
       setEditForm(null);
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to submit your changes.");
+      toast.error("Failed to submit your changes.");
     } finally {
       setSubmitting(false);
     }

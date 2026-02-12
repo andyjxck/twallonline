@@ -46,6 +46,7 @@ import { supabase } from '@/utils/supabase';
 import { getStoredUser } from '@/utils/user';
 import { goBack } from '@/utils/navigation';
 import { crossAlert } from '@/utils/alert';
+import { toast } from 'sonner-native';
 import { sendNotification, notifyStaffOfAdminAction } from '@/utils/notifications';
 import { useTheme } from "@/utils/ThemeContext";
 import { getBlockLogs } from '@/utils/blocking';
@@ -567,7 +568,7 @@ export default function ModerationAdmin() {
           setData(result || []);
         } catch (error) {
           console.error(error);
-          crossAlert("Error", "Failed to fetch data.");
+          toast.error("Failed to fetch data.");
         } finally {
           setLoading(false);
         }
@@ -630,11 +631,11 @@ export default function ModerationAdmin() {
         console.warn("Moderation log failed:", logError);
       }
 
-      crossAlert("Success", "Post has been restored.");
+      toast.success("Post has been restored.");
               fetchData();
             } catch (error) {
               console.error(error);
-              crossAlert("Error", "Failed to restore post.");
+              toast.error("Failed to restore post.");
             }
           }
         }
@@ -697,11 +698,11 @@ export default function ModerationAdmin() {
                 reason: `Undid action: ${log.action} (original log ID: ${log.id})`
               });
 
-              crossAlert("Success", "Action has been undone.");
+              toast.success("Action has been undone.");
               fetchData();
             } catch (error) {
               console.error(error);
-              crossAlert("Error", "Failed to undo action.");
+              toast.error("Failed to undo action.");
             }
           }
         }
@@ -716,7 +717,7 @@ export default function ModerationAdmin() {
           const targetLevel = getLevel(targetUser);
 
           if (role.startsWith('demote') && targetLevel >= currentLevel) {
-            crossAlert("Forbidden", "You cannot demote someone at your level or higher.");
+            toast.error("You cannot demote someone at your level or higher.");
             return;
           }
 
@@ -732,7 +733,7 @@ export default function ModerationAdmin() {
               metadata: { username: targetUser.username, requested_role: 'demote_councillor' }
             });
             if (logError) throw logError;
-            crossAlert("Request Sent", "Your demotion request for this Councillor has been sent to Admins for review.");
+            toast.success("Demotion request sent to Admins for review.");
             return;
           }
 
@@ -773,7 +774,7 @@ export default function ModerationAdmin() {
           metadata: { targetUserId: userId, action: role }
         });
 
-          crossAlert("Success", "User role updated.");
+          toast.success("User role updated.");
           setUserRoleModal(false);
           setSelectedUser(null);
           setSelectedCityId(null);
@@ -782,7 +783,7 @@ export default function ModerationAdmin() {
           fetchData();
         } catch (error) {
         console.error(error);
-        crossAlert("Error", "Failed to update user role.");
+        toast.error("Failed to update user role.");
       }
     };
 
@@ -837,11 +838,11 @@ export default function ModerationAdmin() {
                   link: '/guidelines'
                 });
 
-                crossAlert("Success", `User @${user.username} has been ${isMuting ? 'muted' : 'unmuted'}.`);
+                toast.success(`User @${user.username} has been ${isMuting ? 'muted' : 'unmuted'}.`);
                 fetchData();
               } catch (err) {
                 console.error(err);
-                crossAlert("Error", "Failed to update mute status.");
+                toast.error("Failed to update mute status.");
               }
             }
           }
@@ -851,7 +852,7 @@ export default function ModerationAdmin() {
 
       const handleRequestEdit = async () => {
         if (!requestEditReason.trim()) {
-          crossAlert("Reason Required", "Please provide a reason for the edit request.");
+          toast.error("Please provide a reason for the edit request.");
           return;
         }
   
@@ -912,13 +913,13 @@ export default function ModerationAdmin() {
             console.warn("Notification failed:", notifErr);
           }
 
-        crossAlert("Request Sent", "User has been notified to edit their submission.");
+        toast.success("User has been notified to edit their submission.");
         setData(prev => prev.filter(p => p.id !== requestEditItem.id));
         setRequestEditItem(null);
         setRequestEditReason('');
       } catch (err) {
         console.error(err);
-        crossAlert("Error", "Failed to send request.");
+        toast.error("Failed to send request.");
       }
     };
 
@@ -1203,10 +1204,10 @@ export default function ModerationAdmin() {
       if (error) throw error;
       
       setData(prev => prev.filter(p => p.id !== itemId));
-      crossAlert("Success", `Item has been ${action}d.`);
+      toast.success(`Item has been ${action}d.`);
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Action failed.");
+      toast.error("Action failed.");
     }
   };
 
@@ -1223,11 +1224,11 @@ export default function ModerationAdmin() {
       });
       if (error) throw error;
       
-      crossAlert("Success", "You have overtaken this chat. AI responses are now disabled.");
+      toast.success("You have overtaken this chat. AI responses are now disabled.");
       fetchData();
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Overtake failed.");
+      toast.error("Overtake failed.");
     }
   };
 
@@ -1259,11 +1260,11 @@ export default function ModerationAdmin() {
       
       setReplyText('');
       setExpandedChatId(null);
-      crossAlert("Success", "Reply sent.");
+      toast.success("Reply sent.");
       fetchData();
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Reply failed.");
+      toast.error("Reply failed.");
     }
   };
 
@@ -1294,17 +1295,17 @@ export default function ModerationAdmin() {
       }
 
       setExpandedChatId(null);
-      crossAlert("Resolved", "The chat has been marked as resolved.");
+      toast.success("Chat marked as resolved.");
       fetchData();
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to resolve chat.");
+      toast.error("Failed to resolve chat.");
     }
   };
 
   const handleOverridePost = async () => {
       if (!overrideReason.trim()) {
-        crossAlert("Reason Required", "Please provide a reason for overriding.");
+        toast.error("Please provide a reason for overriding.");
         return;
       }
 
@@ -1344,16 +1345,16 @@ export default function ModerationAdmin() {
         setOverrideItem(null);
         setOverrideReason('');
         setOverrideMode(null);
-        crossAlert("Success", "Post has been approved and posted.");
+        toast.success("Post has been approved and posted.");
         } catch (error) {
           console.error(error);
-          crossAlert("Error", "Failed to approve post.");
+          toast.error("Failed to approve post.");
         }
       };
 
     const handleOverrideDelete = async () => {
     if (!overrideReason.trim()) {
-      crossAlert("Reason Required", "Please provide a reason for overriding.");
+      toast.error("Please provide a reason for overriding.");
       return;
     }
 
@@ -1393,17 +1394,17 @@ export default function ModerationAdmin() {
         setOverrideItem(null);
         setOverrideReason('');
         setOverrideMode(null);
-          crossAlert("Success", "Post has been deleted.");
+          toast.success("Post has been deleted.");
         } catch (error) {
           console.error(error);
-          crossAlert("Error", "Failed to delete post.");
+          toast.error("Failed to delete post.");
         }
       };
 
 
   const handleCreatePollFromSuggestion = async () => {
     if (!pollQuestion.trim() || pollOptions.some(o => !o.trim())) {
-      crossAlert("Incomplete", "Please provide a question and all options.");
+      toast.error("Please provide a question and all options.");
       return;
     }
 
@@ -1442,14 +1443,14 @@ export default function ModerationAdmin() {
 
       if (suggestionError) throw suggestionError;
 
-      crossAlert("Success", "Poll created and suggestion approved!");
+      toast.success("Poll created and suggestion approved!");
       setData(prev => prev.filter(p => p.id !== pollModalItem));
       setPollModalItem(null);
       setPollQuestion('');
       setPollOptions(['Yes', 'No', 'Maybe later']);
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to complete operation.");
+      toast.error("Failed to complete operation.");
     }
   };
 
@@ -1573,7 +1574,7 @@ export default function ModerationAdmin() {
       setAnalyticsDetailData(result);
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Failed to fetch details.");
+      toast.error("Failed to fetch details.");
     } finally {
       setAnalyticsDetailLoading(false);
     }

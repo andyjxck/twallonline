@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { ChevronLeft, LogOut, Shield, Info, Bell, Key, BarChart2, ChevronRight, Trash2, UserX, X, Mail, HelpCircle, FileText } from "lucide-react-native";
 import { scheduleAccountDeletion } from "../utils/user";
 import { crossAlert } from "../utils/alert";
+import { toast } from 'sonner-native';
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
 import { goBack } from "@/utils/navigation";
@@ -218,7 +219,7 @@ if (typeof global.crypto.getRandomValues !== 'function') {
       // Update global store so UI re-renders correctly
       useAuthStore.getState().setAuth(data);
       
-      crossAlert("Success", "Password updated successfully.");
+      toast.success("Password updated successfully.");
       setShowChangePassword(false);
       setNewPassword("");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -256,7 +257,7 @@ if (typeof global.crypto.getRandomValues !== 'function') {
               setBlockedUsers(prev => prev.filter(b => b.blocked_user_id !== blockedId));
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
-              crossAlert("Error", "Failed to unblock user.");
+              toast.error("Failed to unblock user.");
             }
           }
         }
@@ -298,13 +299,10 @@ const handleSignOut = async () => {
                         const updatedUser = await scheduleAccountDeletion(auth.id);
                         useAuthStore.getState().setAuth(updatedUser);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        crossAlert(
-                          "Account Scheduled for Deletion",
-                          "Your account will be permanently deleted in 30 days. You can cancel this anytime from settings."
-                        );
+                        toast.success("Account scheduled for deletion. You have 30 days to cancel.");
                       } catch (error) {
                         console.error("Error scheduling deletion:", error);
-                        crossAlert("Error", "Failed to schedule account deletion. Please try again.");
+                        toast.error("Failed to schedule account deletion. Please try again.");
                       }
                     }
                   }
@@ -325,14 +323,10 @@ const handleSignOut = async () => {
         if (canOpen) {
           await Linking.openURL(url);
         } else {
-          crossAlert(
-            "Contact Support",
-            `We couldn't open your mail app automatically. Please email us at:\n\n${email}`,
-            [{ text: "OK" }]
-          );
+          toast.info(`Email us at: ${email}`);
         }
       } catch (error) {
-        crossAlert("Error", "Could not open mail app.");
+        toast.error("Could not open mail app.");
       }
     };
 

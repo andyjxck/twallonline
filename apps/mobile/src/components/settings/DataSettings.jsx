@@ -13,6 +13,7 @@ import { supabase } from "@/utils/supabase";
 import { decryptText } from "@/utils/encryption";
 import * as Haptics from "expo-haptics";
 import { crossAlert } from "@/utils/alert";
+import { toast } from 'sonner-native';
 
 function DataAction({ icon: Icon, color, title, subtitle, onPress, destructive = false }) {
   return (
@@ -105,7 +106,7 @@ export function DataSettings({ onDelete }) {
     Haptics.selectionAsync();
 
     if (!biometricAvailable) {
-      crossAlert("Not Available", `${biometricType} is not set up on this device. Enable it in your device settings first.`);
+      toast.error(`${biometricType} is not set up on this device. Enable it in your device settings first.`);
       return;
     }
 
@@ -127,7 +128,7 @@ export function DataSettings({ onDelete }) {
           .eq("user_id", userId);
         setBiometricEnabled(true);
       } else {
-        crossAlert("Authentication Failed", `Unable to enable ${biometricType} lock.`);
+        toast.error(`Unable to enable ${biometricType} lock.`);
       }
     } else {
       await supabase
@@ -145,7 +146,7 @@ export function DataSettings({ onDelete }) {
 
       const storedUser = await AsyncStorage.getItem("currentUser");
       if (!storedUser) {
-        crossAlert("Error", "Please sign in to export your data.");
+        toast.error("Please sign in to export your data.");
         return;
       }
 
@@ -199,7 +200,7 @@ export function DataSettings({ onDelete }) {
       setShowExportModal(false);
     } catch (err) {
       console.error("Export error:", err);
-      crossAlert("Export Failed", "Unable to export your data. Please try again.");
+      toast.error("Unable to export your data. Please try again.");
     } finally {
       setExporting(false);
     }

@@ -44,6 +44,7 @@ if (Platform.OS !== 'web') {
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { expandImage } from '../utils/ai';
 import { crossAlert } from '../utils/alert';
+import { toast } from 'sonner-native';
 import Markdown from 'react-native-markdown-display';
 import { 
   getOrCreateKeyPair, 
@@ -932,7 +933,7 @@ useEffect(() => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
           console.error('Error renaming group:', error);
-          crossAlert('Error', 'Failed to rename group');
+          toast.error('Failed to rename group');
         }
       }
     };
@@ -956,7 +957,7 @@ useEffect(() => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
       console.error('Error setting nickname:', err);
-      crossAlert('Error', 'Failed to save nickname');
+      toast.error('Failed to save nickname');
     }
   };
 
@@ -998,7 +999,7 @@ useEffect(() => {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
               console.error('Error leaving group:', error);
-              crossAlert('Error', 'Failed to leave group');
+              toast.error('Failed to leave group');
             }
           }
         }
@@ -1024,11 +1025,11 @@ useEffect(() => {
                 reason: 'User reported via chat'
               });
               setShowGroupInfo(false);
-              crossAlert('Reported', 'Thank you for your report. We will review it shortly.');
+              toast.success('Report submitted. We will review it shortly.');
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
               console.error('Error reporting chat:', error);
-              crossAlert('Error', 'Failed to submit report');
+              toast.error('Failed to submit report');
             }
           }
         }
@@ -1046,7 +1047,7 @@ useEffect(() => {
 
   const confirmBlockUser = async () => {
     if (!blockReason) {
-      crossAlert('Reason Required', 'Please select or enter a reason for blocking this user.');
+      toast.error('Please select or enter a reason for blocking this user.');
       return;
     }
     const otherUser = getOtherUser(activeChat);
@@ -1065,10 +1066,10 @@ useEffect(() => {
       setShowChatList(true);
       loadUserAndChats();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      crossAlert('Blocked', `@${otherUser.username} has been blocked. You will no longer see their content or be able to message them.`);
+      toast.success(`@${otherUser.username} has been blocked.`);
     } catch (error) {
       console.error('Error blocking user:', error);
-      crossAlert('Error', error.message || 'Failed to block user');
+      toast.error(error.message || 'Failed to block user');
     }
   };
 
@@ -1107,7 +1108,7 @@ useEffect(() => {
                 .eq('user_id', user.id);
 
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              crossAlert('Unkept', 'Your unkeep has been recorded. Message will disappear when everyone unkeeps.');
+              toast.info('Unkeep recorded. Message will disappear when everyone unkeeps.');
             } else {
               // Keep: check if session exists, if so add user as keeper; otherwise create new session
               const { data: existingSession } = await supabase
@@ -1148,7 +1149,7 @@ useEffect(() => {
               }
 
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              crossAlert('Kept', 'Message kept. All keepers must unkeep to remove.');
+              toast.success('Message kept. All keepers must unkeep to remove.');
             }
             // Update local state without reloading (preserves decrypted text)
             setMessages(prev => prev.map(m => 
@@ -1156,7 +1157,7 @@ useEffect(() => {
             ));
           } catch (err) {
             console.error('Keep/Unkeep error:', err);
-            crossAlert('Error', 'Failed to update message keep status.');
+            toast.error('Failed to update message keep status.');
           }
         }
       },
@@ -1186,10 +1187,10 @@ useEffect(() => {
                       }
                     });
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    crossAlert('Reported', 'Message has been reported to moderators.');
+                    toast.success('Message reported to moderators.');
                   } catch (err) {
                     console.error('Report error:', err);
-                    crossAlert('Error', 'Failed to report message.');
+                    toast.error('Failed to report message.');
                   }
                 }
               },
@@ -1212,10 +1213,10 @@ useEffect(() => {
                       }
                     });
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    crossAlert('Reported', 'Message has been reported to moderators with content.');
+                    toast.success('Message reported to moderators with content.');
                   } catch (err) {
                     console.error('Report error:', err);
-                    crossAlert('Error', 'Failed to report message.');
+                    toast.error('Failed to report message.');
                   }
                 }
               },
@@ -1312,7 +1313,7 @@ useEffect(() => {
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
-        crossAlert('Permission denied', 'Please allow microphone access to record voice messages.');
+        toast.error('Please allow microphone access to record voice messages.');
         return;
       }
    // Guard FIRST — prevents double recording
@@ -1448,7 +1449,7 @@ const stopRecording = async () => {
         return publicUrl;
       } catch (error) {
         console.error('Error uploading media:', error);
-        crossAlert('Upload Error', 'Failed to upload media. Please try again.');
+        toast.error('Failed to upload media. Please try again.');
         return null;
       }
     };
@@ -1482,11 +1483,11 @@ const stopRecording = async () => {
         setFullscreenMedia(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        crossAlert('Error', 'Failed to expand image.');
+        toast.error('Failed to expand image.');
       }
     } catch (error) {
       console.error('Expansion error:', error);
-      crossAlert('Error', 'An error occurred during expansion.');
+      toast.error('An error occurred during expansion.');
     } finally {
       setIsExpanding(false);
     }
@@ -1550,7 +1551,7 @@ const stopRecording = async () => {
                 isE2E = isEncrypted(messageText);
               } catch (encErr) {
                 console.error('Encryption failed, sending plaintext:', encErr);
-                crossAlert('Encryption Notice', 'Message could not be encrypted and was sent as plaintext.');
+                toast.info('Message could not be encrypted and was sent as plaintext.');
               }
             }
 
@@ -1761,14 +1762,14 @@ const stopRecording = async () => {
 
         if (audioPermission.status !== 'granted') {
           setDebugStatus('Audio permission denied');
-          crossAlert('Permission Denied', 'Microphone access is required for calls.');
+          toast.error('Microphone access is required for calls.');
           setIsJoining(false);
           return;
         }
 
         if (activeCall.call_type === 'video' && cameraPermission.status !== 'granted') {
           setDebugStatus('Camera permission denied');
-          crossAlert('Permission Denied', 'Camera access is required for video calls.');
+          toast.error('Camera access is required for video calls.');
           // Don't return, fallback to audio? Actually let's just let it fail or join as audio.
         }
 
@@ -1881,7 +1882,7 @@ const stopRecording = async () => {
         if (error || !data?.token) {
           console.error('Token error:', error || 'No token');
           setDebugStatus('Token failed');
-          crossAlert('Call Error', 'Failed to secure call connection.');
+          toast.error('Failed to secure call connection.');
           setIsJoining(false);
           return;
         }
@@ -2199,7 +2200,7 @@ useEffect(() => {
         if (next) {
           const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
           if (cameraPermission.status !== 'granted') {
-            crossAlert('Permission Denied', 'Camera access is required for video.');
+            toast.error('Camera access is required for video.');
             return;
           }
           if (!agoraEngine.current) return;
@@ -2237,7 +2238,7 @@ useEffect(() => {
       if (nextType === 'video') {
         const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
         if (cameraPermission.status !== 'granted') {
-          crossAlert('Permission Denied', 'Camera access is required for video.');
+          toast.error('Camera access is required for video.');
           return;
         }
         await agoraEngine.current?.enableVideo();
@@ -2312,14 +2313,14 @@ useEffect(() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } catch (error) {
           console.error('Error uploading group avatar:', error);
-          crossAlert('Error', 'Failed to upload avatar');
+          toast.error('Failed to upload avatar');
         }
       }
     };
 
   const createGroupChat = async () => {
     if (!groupName.trim() || selectedUsers.length < 2) {
-      crossAlert('Error', 'Please enter a group name and select at least 2 members');
+      toast.error('Please enter a group name and select at least 2 members');
       return;
     }
 

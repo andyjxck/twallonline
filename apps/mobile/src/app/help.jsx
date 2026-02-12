@@ -19,6 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocationStore } from '@/utils/locationStore';
 import { goBack } from '@/utils/navigation';
 import { crossAlert } from '@/utils/alert';
+import { toast } from 'sonner-native';
 
 export default function HelpContact() {
   const { theme, isHippie, isLight } = useTheme();
@@ -403,7 +404,7 @@ export default function HelpContact() {
                 userid: currentUser.id,
                 feedback: `[REPORT] Message ID: ${message.id} Content: ${content}`
               });
-              crossAlert("Reported", "Thank you for reporting. Our team will review this message.");
+              toast.success("Thank you for reporting. Our team will review this message.");
             } catch (e) {
               console.error("Report error:", e);
             }
@@ -550,7 +551,7 @@ export default function HelpContact() {
 
   const submitReview = async () => {
     if (rating === 0) {
-      crossAlert("Rating Required", "Please select a rating from 1 to 5 stars.");
+      toast.error("Please select a rating from 1 to 5 stars.");
       return;
     }
     setIsSubmitting(true);
@@ -565,10 +566,10 @@ export default function HelpContact() {
       if (error) throw error;
       
       await purgeMessages();
-      crossAlert("Thank You", "Your feedback has been submitted and the chat has been cleared.");
+      toast.success("Your feedback has been submitted and the chat has been cleared.");
     } catch (error) {
       console.error(error);
-      crossAlert("Error", "Could not submit review.");
+      toast.error("Could not submit review.");
     } finally {
       setIsSubmitting(false);
     }
@@ -773,7 +774,7 @@ export default function HelpContact() {
       console.error("Error in handleSend:", error);
       setInputText(text);
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      crossAlert("Error", "Message could not be sent.");
+      toast.error("Message could not be sent.");
       isSendingRef.current = false;
       setIsTyping(false);
     }
@@ -801,11 +802,11 @@ export default function HelpContact() {
           
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        crossAlert("Expansion Failed", "Towny couldn't expand this image right now.");
+        toast.error("Towny couldn't expand this image right now.");
       }
     } catch (error) {
       console.error("Expansion error:", error);
-      crossAlert("Error", "Something went wrong while expanding the image.");
+      toast.error("Something went wrong while expanding the image.");
     } finally {
       setIsExpanding(false);
     }

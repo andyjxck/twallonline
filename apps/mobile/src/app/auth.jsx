@@ -16,6 +16,7 @@ import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { crossAlert } from '@/utils/alert';
+import { toast } from 'sonner-native';
 import { supabase } from "../utils/supabase";
 import { useAuthStore } from "../utils/auth";
 import { useLocationStore } from "../utils/locationStore";
@@ -137,17 +138,17 @@ export default function Auth() {
     const trimmedPassword = password.trim();
 
     if (!trimmedUsername || !trimmedPassword) {
-      crossAlert("Error", "Please fill in all fields");
+      toast.error("Please fill in all fields");
       return;
     }
 
     if (!isLogin && !agreeToRules) {
-      crossAlert("Community Rules Required", "You must agree to follow the community rules to create an account.");
+      toast.error("You must agree to follow the community rules.");
       return;
     }
 
     if (!isLogin && (!agreedTerms || !agreedPrivacy)) {
-      crossAlert("Error", "You must agree to the Terms of Service and Privacy Policy to create an account.");
+      toast.error("You must agree to the Terms of Service and Privacy Policy.");
       return;
     }
 
@@ -299,7 +300,7 @@ export default function Auth() {
         setShowRecoveryCodes(true);
       }
     } catch (error) {
-      crossAlert("Error", error.message);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -340,7 +341,7 @@ export default function Auth() {
         });
 
     } catch (error) {
-      crossAlert("Error", error.message);
+      toast.error(error.message);
       // Remove invalid profile
       if (error.message.includes("no longer valid")) {
         await removeProfile(profile.username);

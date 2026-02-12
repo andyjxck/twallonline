@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Linking, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { crossAlert } from '../utils/alert';
+import { toast } from 'sonner-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Star, Briefcase, MapPin, Music, Youtube, Globe, Instagram, ExternalLink, ShoppingBag, Truck, MoreHorizontal } from 'lucide-react-native';
 
@@ -24,7 +25,7 @@ export default function PromotionAd({ item }) {
   const handleOpen = () => {
     if (item.link) {
       Linking.openURL(item.link).catch(() => {
-        crossAlert("Error", "Could not open link");
+        toast.error("Could not open link");
       });
     }
   };

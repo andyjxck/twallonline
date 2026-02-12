@@ -58,6 +58,7 @@ import * as Haptics from "expo-haptics";
   import { useTheme } from "@/utils/ThemeContext";
 import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
+import { toast } from 'sonner-native';
   import { sendFriendRequestNotification, sendFriendAcceptedNotification } from "../utils/notifications";
   import { getSavedProfiles, saveProfile, removeProfile } from "../utils/savedProfiles";
   import { useAuth, useAuthStore, useChatStore } from "../utils/auth";
@@ -240,7 +241,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         
           // Prevent viewing other anon profiles
           if (userData && !userData.password && !viewingOwnProfile) {
-            crossAlert("Private Profile", "Anonymous profiles are private and cannot be visited.");
+            toast.error("Anonymous profiles are private and cannot be visited.");
             goBack(router);
             return;
           }
@@ -358,32 +359,32 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
             await saveProfile({ username: user.username, avatar_url: publicUrl, emoji_icon: null });
             setShowEmojiPicker(false);
           loadData();
-        } catch (error) { crossAlert("Error", "Failed to upload avatar"); }
+        } catch (error) { toast.error("Failed to upload avatar"); }
       }
     };
 
   const handleUpdateBio = async () => {
-    if (bioText.length > 160) { crossAlert("Error", "Bio too long"); return; }
+    if (bioText.length > 160) { toast.error("Bio too long"); return; }
     setEditingBio(false);
     try {
       await supabase.from('rusers').update({ bio: bioText }).eq('id', user.id);
       loadData();
-    } catch (error) { crossAlert("Error", "Failed to update bio"); }
+    } catch (error) { toast.error("Failed to update bio"); }
   };
 
   const handleUpdateUsername = async () => {
-    if (usernameText.length < 3) { crossAlert("Error", "Username too short"); return; }
+    if (usernameText.length < 3) { toast.error("Username too short"); return; }
     if (user.last_username_change) {
       const lastChange = new Date(user.last_username_change);
       const diff = (new Date() - lastChange) / (1000 * 60 * 60 * 24);
       if (diff < 30) {
-        crossAlert("Error", `You can only change your username once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
+        toast.error(`You can only change your username once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
         return;
       }
     }
     try {
       const { data: existing } = await supabase.from('rusers').select('id').eq('username', usernameText).neq('id', user.id).single();
-      if (existing) { crossAlert("Error", "Username taken"); return; }
+      if (existing) { toast.error("Username taken"); return; }
       
       await supabase.from('rusers').update({ 
         username: usernameText, 
@@ -391,16 +392,16 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       }).eq('id', user.id);
       setEditingUsername(false);
       loadData();
-    } catch (error) { crossAlert("Error", "Failed to update username"); }
+    } catch (error) { toast.error("Failed to update username"); }
   };
 
   const handleUpdateNickname = async () => {
-    if (nicknameText.length < 2) { crossAlert("Error", "Nickname too short"); return; }
+    if (nicknameText.length < 2) { toast.error("Nickname too short"); return; }
     if (user.last_nickname_change) {
       const lastChange = new Date(user.last_nickname_change);
       const diff = (new Date() - lastChange) / (1000 * 60 * 60 * 24);
       if (diff < 30) {
-        crossAlert("Error", `You can only change your nickname once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
+        toast.error(`You can only change your nickname once every 30 days. Try again in ${Math.ceil(30 - diff)} days.`);
         return;
       }
     }
@@ -411,7 +412,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       }).eq('id', user.id);
       setEditingNickname(false);
       loadData();
-    } catch (error) { crossAlert("Error", "Failed to update nickname"); }
+    } catch (error) { toast.error("Failed to update nickname"); }
   };
 
   const handleSelectEmoji = async (emoji) => {
@@ -421,7 +422,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       await saveProfile({ username: user.username, emoji_icon: emoji, avatar_url: null });
       setShowEmojiPicker(false);
       loadData();
-    } catch (error) { crossAlert("Error", "Failed to update icon"); }
+    } catch (error) { toast.error("Failed to update icon"); }
   };
 
   const handleLogout = async () => {
@@ -467,7 +468,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     if (!target) return;
 
     if (!currentUser?.password && !currentUser?.supabase_uid) {
-      crossAlert("Join the Wall", "Please sign up to add friends!");
+      toast.error("Please sign up to add friends!");
       return;
     }
     setAddingFriend(true);
@@ -496,10 +497,10 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         requestId: newRel.id
       });
       
-      crossAlert("Success", `Friend request sent to @${friendUser.username}!`);
+      toast.success(`Friend request sent to @${friendUser.username}!`);
       setFriendUsername("");
       setSearchResults([]);
-    } catch (error) { crossAlert("Error", error.message); }
+    } catch (error) { toast.error(error.message); }
     finally { setAddingFriend(false); }
   };
 
@@ -508,14 +509,14 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       const { success, error } = await acceptFriendRequest(requestId, currentUser.id, friendId, currentUser.username);
       if (!success) throw error || new Error("Failed to accept request");
       loadData();
-    } catch (error) { crossAlert("Error", "Failed to accept request"); }
+    } catch (error) { toast.error("Failed to accept request"); }
   };
 
   const handleRejectFriend = async (requestId) => {
     try {
       await supabase.from('friends').delete().eq('id', requestId);
       loadData();
-    } catch (error) { crossAlert("Error", "Failed to reject request"); }
+    } catch (error) { toast.error("Failed to reject request"); }
   };
 
     const handleActionFriend = async () => {
@@ -523,7 +524,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
       setAddingFriend(true);
       try {
         if (currentUser.id === user.id) {
-          crossAlert("Error", "You can't add yourself");
+          toast.error("You can't add yourself");
           return;
         }
         if (!friendshipStatus) {
@@ -556,7 +557,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
           }
         }
       } catch (error) {
-        crossAlert("Error", error.message);
+        toast.error(error.message);
       } finally {
         setAddingFriend(false);
       }
@@ -579,7 +580,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         
             if (existing) {
               if (existing.status === 'rejected') {
-                crossAlert("Error", "You cannot message this user.");
+                toast.error("You cannot message this user.");
                 return;
               }
               
@@ -619,7 +620,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
             if (newChat) {
               useChatStore.getState().open(newChat.id);
               if (status === 'pending') {
-                crossAlert("Request Sent", "Message request sent! They'll need to approve it before you can chat.");
+                toast.info("Message request sent! They'll need to approve it before you can chat.");
               }
             }
           }
@@ -694,7 +695,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
     const submitReport = async (targetUser, reason) => {
       if (!reason) {
-        crossAlert("Reason Required", "Please select a reason for reporting.");
+        toast.error("Please select a reason for reporting.");
         return;
       }
       try {
@@ -704,12 +705,12 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
           setShowReportModal(false);
           setReportingUser(null);
           setReportReason("");
-          crossAlert("Report Submitted", "Thank you for your report. Our team will review it within 24 hours.");
+          toast.success("Report submitted. Our team will review it within 24 hours.");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } catch (error) {
         console.error(error);
-        crossAlert("Error", "Failed to submit report. Please try again.");
+        toast.error("Failed to submit report. Please try again.");
       }
     };
 
@@ -720,7 +721,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
       const confirmBlockUser = async () => {
         if (!blockReason) {
-          crossAlert("Reason Required", "Please select a reason for blocking.");
+          toast.error("Please select a reason for blocking.");
           return;
         }
         try {
@@ -734,10 +735,10 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
           setShowBlockModal(false);
           setUserIsBlocked(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          crossAlert("Blocked", `@${user.username} has been blocked. You will no longer see their content.`);
+          toast.success(`@${user.username} has been blocked.`);
         } catch (error) {
           console.error(error);
-          crossAlert("Error", error.message || "Failed to block user.");
+          toast.error(error.message || "Failed to block user.");
         }
       };
 
@@ -770,16 +771,16 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
         if (action === 'delete') {
           await supabase.from('rposts').update({ is_deleted: true }).eq('id', postId);
-          crossAlert("Success", "Post deleted");
+          toast.success("Post deleted");
         } else if (action === 'toggle_comments') {
           await supabase.from('rposts').update({ comments_disabled: !post?.comments_disabled }).eq('id', postId);
-          crossAlert("Success", post?.comments_disabled ? "Comments enabled" : "Comments disabled");
+          toast.success(post?.comments_disabled ? "Comments enabled" : "Comments disabled");
         } else if (action === 'blur') {
           await supabase.from('rposts').update({ is_blurred: true, blur_reason: reason }).eq('id', postId);
-          crossAlert("Success", "Post blurred");
+          toast.success("Post blurred");
         } else if (action === 'unblur') {
           await supabase.from('rposts').update({ is_blurred: false, blur_reason: null }).eq('id', postId);
-          crossAlert("Success", "Blur removed");
+          toast.success("Blur removed");
         }
 
         // Log the moderation action
@@ -802,7 +803,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
         loadData();
       } catch (e) { 
         console.error(e); 
-        crossAlert("Error", "Failed to perform action");
+        toast.error("Failed to perform action");
       }
     };
 
@@ -966,7 +967,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                           <TouchableOpacity 
                             onPress={() => {
                               if (!currentUser?.password && !currentUser?.supabase_uid) {
-                                crossAlert("Join the Wall", "Please sign up to message other users!");
+                                toast.error("Please sign up to message other users!");
                                 return;
                               }
                               handleMessageUser();
@@ -987,7 +988,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
                               <TouchableOpacity 
                                 onPress={() => {
                                   if (!currentUser?.password && !currentUser?.supabase_uid) {
-                                    crossAlert("Join the Wall", "Please sign up to add friends!");
+                                    toast.error("Please sign up to add friends!");
                                     return;
                                   }
                                   handleActionFriend();

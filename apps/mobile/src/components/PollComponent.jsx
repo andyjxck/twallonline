@@ -11,6 +11,7 @@ import { supabase } from '@/utils/supabase';
 import { getStoredUser } from '@/utils/user';
 import * as Haptics from 'expo-haptics';
 import { crossAlert } from '../utils/alert';
+import { toast } from 'sonner-native';
 import { Clock } from 'lucide-react-native';
 
 export default function PollComponent({ pollId, onVoteChange }) {
@@ -99,7 +100,7 @@ export default function PollComponent({ pollId, onVoteChange }) {
 
   const handleVote = async (optionId) => {
     if (!user) {
-      crossAlert("Login Required", "Please sign in to vote.");
+      toast.error("Please sign in to vote.");
       return;
     }
 
@@ -115,7 +116,7 @@ export default function PollComponent({ pollId, onVoteChange }) {
 
       if (error) {
         if (error.code === '23505') {
-          crossAlert("Already Voted", "You have already cast your vote.");
+          toast.info("You have already voted.");
         } else {
           throw error;
         }
@@ -126,7 +127,7 @@ export default function PollComponent({ pollId, onVoteChange }) {
       if (onVoteChange) onVoteChange();
     } catch (error) {
       console.error("Error voting:", error);
-      crossAlert("Error", "Failed to cast vote.");
+      toast.error("Failed to cast vote.");
     }
   };
 
