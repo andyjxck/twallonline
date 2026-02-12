@@ -108,8 +108,8 @@ export default function FloatingChat() {
     pendingCallAction,
     pendingCallId,
     clearPendingCall,
-    dockCollapsed,
   } = useChatStore();
+  const dockCollapsed = useChatStore(state => state.dockCollapsed);
 const { auth: user } = useAuthStore();
 const insets = useSafeAreaInsets();
 const [activeChat, setActiveChat] = useState(null);
