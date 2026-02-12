@@ -143,6 +143,19 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   const [commentReportReason, setCommentReportReason] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
   const [commentLikes, setCommentLikes] = useState({});
+  const [showcaseInfo, setShowcaseInfo] = useState(null);
+
+  useEffect(() => {
+    if (!item?.user || item.is_anonymous) return;
+    const u = item.user;
+    if (u.active_identity === 'talent' && u.talent_showcase_id) {
+      supabase.from('rtalent').select('name, avatar_url').eq('id', u.talent_showcase_id).single()
+        .then(({ data }) => { if (data) setShowcaseInfo(data); });
+    } else if (u.active_identity === 'business' && u.business_showcase_id) {
+      supabase.from('rbusinesses').select('name, avatar_url').eq('id', u.business_showcase_id).single()
+        .then(({ data }) => { if (data) setShowcaseInfo(data); });
+    }
+  }, [item?.user?.active_identity, item?.user?.talent_showcase_id, item?.user?.business_showcase_id]);
 
   const dynamicStyles = useMemo(() => StyleSheet.create({
     username: { ...styles.username, color: theme.colors.text },
@@ -580,6 +593,8 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                     <View style={styles.anonAvatarContainer}>
                       <UserX size={20} color="rgba(255,255,255,0.5)" />
                     </View>
+                  ) : showcaseInfo?.avatar_url ? (
+                    <Image source={{ uri: showcaseInfo.avatar_url }} style={styles.avatar} />
                   ) : item.user?.avatar_url ? (
                     <Image source={{ uri: item.user.avatar_url }} style={styles.avatar} />
                   ) : (
@@ -607,7 +622,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                         </View>
                       ) : (
                         <>
-                          <Text style={dynamicStyles.username}>@{item.user?.username}</Text>
+                          <Text style={dynamicStyles.username}>{showcaseInfo?.name || `@${item.user?.username}`}</Text>
                           {isOnline(item.user?.last_seen) && <View style={styles.onlineDot} />}
                           {item.user?.is_admin && (
                             <View style={[styles.roleBadge, styles.adminBadge]}>
