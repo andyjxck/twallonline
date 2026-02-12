@@ -446,7 +446,8 @@ if (user?.id) {
       }
       
       if (selectedBusiness.links) {
-        allLinks.push(...selectedBusiness.links);
+        const parsedLinks = Array.isArray(selectedBusiness.links) ? selectedBusiness.links : (typeof selectedBusiness.links === 'string' ? JSON.parse(selectedBusiness.links || '[]') : []);
+        allLinks.push(...parsedLinks);
       }
       
       const deliveryLinks = [];
