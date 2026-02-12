@@ -28,7 +28,10 @@ import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
-import { RichTextEditor } from "../components/RichTextEditor";
+let RichTextEditor;
+if (Platform.OS !== 'web') {
+  RichTextEditor = require('../components/RichTextEditor').RichTextEditor;
+}
 import HippieBackground from "../components/HippieBackground";
 import { offlineStorage, checkNetworkStatus } from "../utils/offline";
 import { sendNewPostNotification, sendFollowerPostNotification } from "../utils/notifications";
@@ -702,14 +705,25 @@ export default function PostScreen() {
               multiline
             />
             
-            <RichTextEditor 
-              value={text} 
-              onChange={setText} 
-              placeholder="Share what's on your mind..." 
-              onPollPress={() => setStep('poll')}
-              minHeight={300}
-              backgroundColor={isHippie ? 'transparent' : theme.colors.background}
-            />
+            {Platform.OS === 'web' ? (
+              <TextInput
+                placeholder="Share what's on your mind..."
+                placeholderTextColor={theme.colors.textSecondary}
+                value={text}
+                onChangeText={setText}
+                style={[styles.titleInput, { color: theme.colors.text, minHeight: 300, textAlignVertical: 'top' }]}
+                multiline
+              />
+            ) : (
+              <RichTextEditor 
+                value={text} 
+                onChange={setText} 
+                placeholder="Share what's on your mind..." 
+                onPollPress={() => setStep('poll')}
+                minHeight={300}
+                backgroundColor={isHippie ? 'transparent' : theme.colors.background}
+              />
+            )}
 
 
           <View style={styles.mediaSection}>
