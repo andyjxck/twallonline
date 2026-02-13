@@ -55,37 +55,9 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from "expo-linear-gradient";
 import { useChatStore, useFeedHighlightStore } from '@/utils/auth';
 
-const renderMarkdownText = (text, style = {}) => {
-  if (!text) return null;
-  const parts = [];
-  let remaining = text;
-  let key = 0;
-  while (remaining.length > 0) {
-    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-    const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/);
-    const underlineMatch = remaining.match(/__(.+?)__/);
-    let earliest = null;
-    let type = null;
-    if (boldMatch && (!earliest || boldMatch.index < earliest.index)) { earliest = boldMatch; type = 'bold'; }
-    if (underlineMatch && (!earliest || underlineMatch.index < earliest.index)) { earliest = underlineMatch; type = 'underline'; }
-    if (italicMatch && (!earliest || italicMatch.index < earliest.index)) { earliest = italicMatch; type = 'italic'; }
-    if (!earliest) {
-      parts.push(<Text key={key++} style={style}>{remaining}</Text>);
-      break;
-    }
-    if (earliest.index > 0) {
-      parts.push(<Text key={key++} style={style}>{remaining.substring(0, earliest.index)}</Text>);
-    }
-    if (type === 'bold') {
-      parts.push(<Text key={key++} style={[style, { fontWeight: '900' }]}>{earliest[1]}</Text>);
-    } else if (type === 'italic') {
-      parts.push(<Text key={key++} style={[style, { fontStyle: 'italic' }]}>{earliest[1]}</Text>);
-    } else if (type === 'underline') {
-      parts.push(<Text key={key++} style={[style, { textDecorationLine: 'underline' }]}>{earliest[1]}</Text>);
-    }
-    remaining = remaining.substring(earliest.index + earliest[0].length);
-  }
-  return <Text style={style} numberOfLines={2}>{parts}</Text>;
+const stripMarkdown = (text) => {
+  if (!text) return '';
+  return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1').replace(/__(.+?)__/g, '$1').replace(/~~(.+?)~~/g, '$1');
 };
 
 const DELIVERY_PLATFORMS = [
@@ -428,12 +400,12 @@ export default function ModerationAdmin() {
                 reactionsInRange,
                 commentsInRange
               ] = await Promise.all([
-                supabase.from('rusers').select('id', { count: 'exact', head: true }).not('username', 'is', null).not('username', 'like', 'anon%'),
+                supabase.from('rusers').select('id, username').not('username', 'is', null),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).eq('moderation_status', 'approved').eq('is_deleted', false),
                 supabase.from('rreactions').select('id', { count: 'exact', head: true }),
                 supabase.from('rcomments').select('id', { count: 'exact', head: true }),
                 supabase.from('rusers').select('id', { count: 'exact', head: true }).eq('is_banned', true),
-                supabase.from('rusers').select('id', { count: 'exact', head: true }).eq('is_banned', false).not('username', 'is', null).not('username', 'like', 'anon%'),
+                supabase.from('rusers').select('id, username').eq('is_banned', false).not('username', 'is', null),
                 supabase.from('rusers').select('id', { count: 'exact', head: true }).eq('is_muted', true),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).eq('moderation_status', 'approved'),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).eq('moderation_status', 'held'),
@@ -445,7 +417,7 @@ export default function ModerationAdmin() {
                 supabase.from('rbusinesses').select('status, id'),
                 supabase.from('rtalent').select('status, id'),
                 supabase.from('rposts').select('id, text, user_id, created_at, rusers(username, emoji_icon)').eq('moderation_status', 'approved').eq('is_deleted', false).order('created_at', { ascending: false }).limit(10),
-                supabase.from('rusers').select('id, username, emoji_icon, created_at, is_verified').not('username', 'is', null).not('username', 'like', 'anon%').order('created_at', { ascending: false }).limit(10),
+                supabase.from('rusers').select('id, username, emoji_icon, created_at, is_verified').not('username', 'is', null).order('created_at', { ascending: false }).limit(50),
                 supabase.from('rcomments').select('id, text, gif_url, user_id, post_id, created_at, rusers(username)').order('created_at', { ascending: false }).limit(10),
                 supabase.from('rhelp_messages').select('id', { count: 'exact', head: true }).neq('status', 'chat'),
                 supabase.from('rreports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -454,11 +426,18 @@ export default function ModerationAdmin() {
                 supabase.from('rcomments').select('created_at').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
                 supabase.from('rreactions').select('created_at').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
                 supabase.from('rposts').select('user_id').eq('moderation_status', 'approved').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-                supabase.from('rusers').select('id', { count: 'exact', head: true }).not('username', 'is', null).not('username', 'like', 'anon%').gt('created_at', timeRangeDate),
+                supabase.from('rusers').select('id, username').not('username', 'is', null).gt('created_at', timeRangeDate),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).gt('created_at', timeRangeDate),
                 supabase.from('rreactions').select('id', { count: 'exact', head: true }).gt('created_at', timeRangeDate),
                 supabase.from('rcomments').select('id', { count: 'exact', head: true }).gt('created_at', timeRangeDate)
               ]);
+
+              // Filter out anon users (username like "anon" + digits) in JS
+              const isAnon = (u) => u && u.username && /^anon\d+$/i.test(u.username);
+              const registeredUsersCount = (usersCount.data || []).filter(u => !isAnon(u)).length;
+              const activeUsersCount = (activeUsers.data || []).filter(u => !isAnon(u)).length;
+              const newUsersInRangeCount = (newUsersInRange.data || []).filter(u => !isAnon(u)).length;
+              const filteredTopUsers = (topUsers.data || []).filter(u => !isAnon(u)).slice(0, 10);
 
               let processedUserGrowth = userGrowth;
               let processedPostGrowth = postGrowth;
@@ -562,23 +541,23 @@ export default function ModerationAdmin() {
               const enrichedUsers = topEngagedUsers?.map(u => ({
                 ...u,
                 post_count: userPostCounts[u.id] || 0
-              })).filter(u => u.post_count > 0).sort((a, b) => b.post_count - a.post_count).slice(0, 5);
+              })).filter(u => u.post_count > 0 && !isAnon(u)).sort((a, b) => b.post_count - a.post_count).slice(0, 5);
 
               setAnalytics({
                 summary: {
-                  users: usersCount.count,
+                  users: registeredUsersCount,
                   posts: postsCount.count,
                   reactions: reactionsCount.count,
                   comments: commentsCount.count,
                 },
                 rangeStats: {
-                  newUsers: newUsersInRange.count || 0,
+                  newUsers: newUsersInRangeCount,
                   newPosts: postsInRange.count || 0,
                   newReactions: reactionsInRange.count || 0,
                   newComments: commentsInRange.count || 0,
                 },
                 users: {
-                  active: activeUsers.count,
+                  active: activeUsersCount,
                   banned: bannedUsers.count,
                   muted: mutedUsers.count || 0,
                   growth: processedUserGrowth,
@@ -1634,13 +1613,13 @@ export default function ModerationAdmin() {
         result = data || [];
       } else if (type === 'reactions') {
         const { data } = await supabase.from('rreactions')
-          .select('id, reaction_type, post_id, user_id, created_at, rusers(username), rposts!post_id(text)')
+          .select('id, reaction_type, post_id, user_id, created_at, rusers(username), rposts(text)')
           .order('created_at', { ascending: false })
           .limit(50);
         result = data || [];
       } else if (type === 'comments') {
         const { data } = await supabase.from('rcomments')
-          .select('id, text, gif_url, post_id, user_id, created_at, rusers(username), rposts!post_id(text)')
+          .select('id, text, gif_url, post_id, user_id, created_at, rusers(username), rposts(text)')
           .order('created_at', { ascending: false })
           .limit(50);
         result = data || [];
@@ -2644,7 +2623,7 @@ export default function ModerationAdmin() {
                               {post.rusers?.emoji_icon || '👤'} @{post.rusers?.username || 'unknown'}
                             </Text>
                           </View>
-                          {renderMarkdownText(post.text, [styles.topPostText, { color: theme.colors.text }])}
+                          <Text style={[styles.topPostText, { color: theme.colors.text }]} numberOfLines={2}>{stripMarkdown(post.text)}</Text>
                           <View style={styles.topPostStats}>
                             <Text style={[styles.topPostStat, { color: '#F59E0B' }]}>
                               {post.reaction_count} reactions
@@ -2813,7 +2792,7 @@ export default function ModerationAdmin() {
                         }}
                       >
                         <Text style={[styles.commentUser, { color: theme.colors.primary }]}>@{comment.rusers?.username || 'unknown'}</Text>
-                        {comment.text ? renderMarkdownText(comment.text, [styles.commentText, { color: theme.colors.text }]) : null}
+                        {comment.text ? <Text style={[styles.commentText, { color: theme.colors.text }]} numberOfLines={2}>{stripMarkdown(comment.text)}</Text> : null}
                         {comment.gif_url ? (
                           <Image source={{ uri: comment.gif_url }} style={{ width: '100%', height: 80, borderRadius: 8, marginTop: 4 }} resizeMode="contain" />
                         ) : null}
@@ -2995,7 +2974,7 @@ export default function ModerationAdmin() {
                             <Text style={styles.detailItemEmoji}>{item.rusers?.emoji_icon || '📝'}</Text>
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.detailItemTitle, { color: theme.colors.primary }]}>@{item.rusers?.username || 'unknown'}</Text>
-                              {renderMarkdownText(item.text, [styles.detailItemText, { color: theme.colors.text }])}
+                              <Text style={[styles.detailItemText, { color: theme.colors.text }]} numberOfLines={2}>{stripMarkdown(item.text)}</Text>
                               {item.moderation_reason && (
                                 <Text style={[styles.detailItemReason, { color: theme.colors.textSecondary }]}>Reason: {item.moderation_reason}</Text>
                               )}
@@ -3040,7 +3019,7 @@ export default function ModerationAdmin() {
                             <Text style={styles.detailItemEmoji}>💬</Text>
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.detailItemTitle, { color: theme.colors.primary }]}>@{item.rusers?.username || 'unknown'}</Text>
-                              {item.text ? renderMarkdownText(item.text, [styles.detailItemText, { color: theme.colors.text }]) : null}
+                              {item.text ? <Text style={[styles.detailItemText, { color: theme.colors.text }]} numberOfLines={2}>{stripMarkdown(item.text)}</Text> : null}
                               {item.gif_url ? (
                                 <Image source={{ uri: item.gif_url }} style={{ width: '100%', height: 60, borderRadius: 6, marginTop: 4 }} resizeMode="contain" />
                               ) : null}
@@ -3093,7 +3072,7 @@ export default function ModerationAdmin() {
                             <Text style={styles.detailItemEmoji}>{item.rusers?.emoji_icon || '📍'}</Text>
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.detailItemTitle, { color: theme.colors.primary }]}>@{item.rusers?.username || 'unknown'}</Text>
-                              {renderMarkdownText(item.text, [styles.detailItemText, { color: theme.colors.text }])}
+                              <Text style={[styles.detailItemText, { color: theme.colors.text }]} numberOfLines={2}>{stripMarkdown(item.text)}</Text>
                               <Text style={[styles.detailItemSubtitle, { color: theme.colors.textSecondary }]}>
                                 {item.rzones?.name} • {new Date(item.created_at).toLocaleDateString()}
                               </Text>
