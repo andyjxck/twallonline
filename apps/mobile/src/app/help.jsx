@@ -528,6 +528,7 @@ export default function HelpContact() {
 
       if (error) throw error;
       setMessages((data || []).map(sanitizeMsg));
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
       
       if (data?.some(m => m.status === 'resolved' || (typeof m.content === 'string' && m.content.includes("Please rate 1-5")))) {
         setShowRating(true);
@@ -585,7 +586,6 @@ export default function HelpContact() {
     if (!text || isSendingRef.current) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    isNearBottomRef.current = true;
 
     const tempId = Date.now();
     const isChatMode = townyMode === 'chat';
@@ -605,6 +605,9 @@ export default function HelpContact() {
     } else {
       setMessages(prev => [...prev, tempMsg]);
     }
+
+    // Scroll to show the user's own message, then let onScroll track position naturally
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
     // Clear input immediately (Enter + send button)
     setInputText('');
@@ -963,19 +966,6 @@ export default function HelpContact() {
           data={messages}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.chatContent}
-          onContentSizeChange={(w, h) => {
-            contentHeightRef.current = h;
-            if (isNearBottomRef.current) {
-              flatListRef.current?.scrollToEnd({ animated: true });
-            }
-          }}
-          onScroll={(e) => {
-            scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
-            layoutHeightRef.current = e.nativeEvent.layoutMeasurement.height;
-            const distanceFromBottom = contentHeightRef.current - scrollOffsetRef.current - layoutHeightRef.current;
-            isNearBottomRef.current = distanceFromBottom < 150;
-          }}
-          scrollEventThrottle={100}
           renderItem={({ item }) => {
             const isMine = !item.is_from_admin;
             const isResolved = item.status === 'resolved';
