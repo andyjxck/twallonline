@@ -370,6 +370,7 @@ export default function ModerationAdmin() {
                 commentsCount,
                 bannedUsers,
                 activeUsers,
+                mutedUsers,
                 approvedPosts,
                 heldPosts,
                 rejectedPosts,
@@ -385,19 +386,22 @@ export default function ModerationAdmin() {
                 messageCount,
                 reportCount,
                 zoneBreakdown,
-                hourlyActivity,
+                hourlyPosts,
+                hourlyComments,
+                hourlyReactions,
                 dailyActiveUsers,
                 newUsersInRange,
                 postsInRange,
                 reactionsInRange,
                 commentsInRange
               ] = await Promise.all([
-                supabase.from('rusers').select('id', { count: 'exact', head: true }),
-                supabase.from('rposts').select('id', { count: 'exact', head: true }),
+                supabase.from('rusers').select('id', { count: 'exact', head: true }).not('username', 'is', null),
+                supabase.from('rposts').select('id', { count: 'exact', head: true }).eq('moderation_status', 'approved').eq('is_deleted', false),
                 supabase.from('rreactions').select('id', { count: 'exact', head: true }),
                 supabase.from('rcomments').select('id', { count: 'exact', head: true }),
                 supabase.from('rusers').select('id', { count: 'exact', head: true }).eq('is_banned', true),
-                supabase.from('rusers').select('id', { count: 'exact', head: true }).eq('is_banned', false),
+                supabase.from('rusers').select('id', { count: 'exact', head: true }).eq('is_banned', false).not('username', 'is', null),
+                supabase.from('rusers').select('id', { count: 'exact', head: true }).eq('is_muted', true),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).eq('moderation_status', 'approved'),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).eq('moderation_status', 'held'),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).eq('moderation_status', 'rejected'),
@@ -408,14 +412,16 @@ export default function ModerationAdmin() {
                 supabase.from('rbusinesses').select('status, id'),
                 supabase.from('rtalent').select('status, id'),
                 supabase.from('rposts').select('id, text, user_id, created_at, rusers(username, emoji_icon)').eq('moderation_status', 'approved').eq('is_deleted', false).order('created_at', { ascending: false }).limit(10),
-                supabase.from('rusers').select('id, username, emoji_icon, created_at, is_verified').order('created_at', { ascending: false }).limit(10),
-                supabase.from('rcomments').select('id, text, user_id, post_id, created_at, rusers(username)').order('created_at', { ascending: false }).limit(10),
+                supabase.from('rusers').select('id, username, emoji_icon, created_at, is_verified').not('username', 'is', null).order('created_at', { ascending: false }).limit(10),
+                supabase.from('rcomments').select('id, text, gif_url, user_id, post_id, created_at, rusers(username)').order('created_at', { ascending: false }).limit(10),
                 supabase.from('rhelp_messages').select('id', { count: 'exact', head: true }).neq('status', 'chat'),
                 supabase.from('rreports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-                supabase.from('rposts').select('zone_id, rzones(name)').eq('moderation_status', 'approved'),
+                supabase.from('rposts').select('zone_id, user_id, rzones(name)').eq('moderation_status', 'approved').gt('created_at', timeRangeDate),
                 supabase.from('rposts').select('created_at').eq('moderation_status', 'approved').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+                supabase.from('rcomments').select('created_at').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+                supabase.from('rreactions').select('created_at').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
                 supabase.from('rposts').select('user_id').eq('moderation_status', 'approved').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-                supabase.from('rusers').select('id', { count: 'exact', head: true }).gt('created_at', timeRangeDate),
+                supabase.from('rusers').select('id', { count: 'exact', head: true }).not('username', 'is', null).gt('created_at', timeRangeDate),
                 supabase.from('rposts').select('id', { count: 'exact', head: true }).gt('created_at', timeRangeDate),
                 supabase.from('rreactions').select('id', { count: 'exact', head: true }).gt('created_at', timeRangeDate),
                 supabase.from('rcomments').select('id', { count: 'exact', head: true }).gt('created_at', timeRangeDate)
@@ -454,16 +460,25 @@ export default function ModerationAdmin() {
                 processedReactions = Object.entries(counts).map(([type, count]) => ({ reaction_type: type, count })).sort((a, b) => b.count - a.count);
               }
 
-              const zoneStats = {};
+              const zoneUserSets = {};
               zoneBreakdown.data?.forEach(p => {
                 const zoneName = p.rzones?.name || 'Unknown';
-                zoneStats[zoneName] = (zoneStats[zoneName] || 0) + 1;
+                if (!zoneUserSets[zoneName]) zoneUserSets[zoneName] = new Set();
+                if (p.user_id) zoneUserSets[zoneName].add(p.user_id);
               });
-              const processedZones = Object.entries(zoneStats).map(([zone, count]) => ({ zone, count })).sort((a, b) => b.count - a.count).slice(0, 8);
+              const processedZones = Object.entries(zoneUserSets).map(([zone, users]) => ({ zone, count: users.size })).sort((a, b) => b.count - a.count).slice(0, 8);
 
               const hourlyStats = Array(24).fill(0);
-              hourlyActivity.data?.forEach(p => {
+              hourlyPosts.data?.forEach(p => {
                 const hour = new Date(p.created_at).getHours();
+                hourlyStats[hour]++;
+              });
+              hourlyComments.data?.forEach(c => {
+                const hour = new Date(c.created_at).getHours();
+                hourlyStats[hour]++;
+              });
+              hourlyReactions.data?.forEach(r => {
+                const hour = new Date(r.created_at).getHours();
                 hourlyStats[hour]++;
               });
 
@@ -532,6 +547,7 @@ export default function ModerationAdmin() {
                 users: {
                   active: activeUsers.count,
                   banned: bannedUsers.count,
+                  muted: mutedUsers.count || 0,
                   growth: processedUserGrowth,
                   dailyActive: uniqueActiveUsers
                 },
@@ -1512,6 +1528,19 @@ export default function ModerationAdmin() {
     }
   };
 
+  const handleStatusChange = async (table, id, newStatus) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const { error } = await supabase.from(table).update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+      toast.success(`Status updated to ${newStatus}`);
+      setAnalyticsDetailData(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update status');
+    }
+  };
+
   const fetchAnalyticsDetail = async (type, filter = null) => {
     setAnalyticsDetailLoading(true);
     setAnalyticsDetailModal(type);
@@ -1536,6 +1565,8 @@ export default function ModerationAdmin() {
       } else if (type === 'posts') {
         const { data } = await supabase.from('rposts')
           .select('id, text, user_id, created_at, moderation_status, rusers(username, emoji_icon)')
+          .eq('moderation_status', 'approved')
+          .eq('is_deleted', false)
           .order('created_at', { ascending: false })
           .limit(50);
         result = data || [];
@@ -1570,13 +1601,13 @@ export default function ModerationAdmin() {
         result = data || [];
       } else if (type === 'reactions') {
         const { data } = await supabase.from('rreactions')
-          .select('id, reaction_type, post_id, user_id, created_at, rusers(username)')
+          .select('id, reaction_type, post_id, user_id, created_at, rusers(username), rposts!post_id(text)')
           .order('created_at', { ascending: false })
           .limit(50);
         result = data || [];
       } else if (type === 'comments') {
         const { data } = await supabase.from('rcomments')
-          .select('id, text, post_id, user_id, created_at, rusers(username)')
+          .select('id, text, gif_url, post_id, user_id, created_at, rusers(username), rposts!post_id(text)')
           .order('created_at', { ascending: false })
           .limit(50);
         result = data || [];
@@ -2346,22 +2377,20 @@ export default function ModerationAdmin() {
               </View>
               
               <View style={styles.analyticsGrid}>
-                <TouchableOpacity 
+                <View 
                   style={[styles.statCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                  onPress={() => fetchAnalyticsDetail('users')}
                 >
                   <Users size={20} color="#3B82F6" />
                   <Text style={dynamicStyles.statValue}>{analytics.summary.users}</Text>
-                  <Text style={dynamicStyles.statLabel}>USERS</Text>
-                  <Text style={[styles.tapHint, { color: theme.colors.textSecondary }]}>tap to view</Text>
-                </TouchableOpacity>
+                  <Text style={dynamicStyles.statLabel}>REGISTERED USERS</Text>
+                </View>
                 <TouchableOpacity 
                   style={[styles.statCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
                   onPress={() => fetchAnalyticsDetail('posts')}
                 >
                   <MessageSquare size={20} color="#10B981" />
                   <Text style={dynamicStyles.statValue}>{analytics.summary.posts}</Text>
-                  <Text style={dynamicStyles.statLabel}>POSTS</Text>
+                  <Text style={dynamicStyles.statLabel}>ACTIVE POSTS</Text>
                   <Text style={[styles.tapHint, { color: theme.colors.textSecondary }]}>tap to view</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -2434,15 +2463,14 @@ export default function ModerationAdmin() {
                 <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>GROWTH TRENDS</Text>
               </View>
 
-              <TouchableOpacity 
+              <View 
                 style={[styles.chartCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                onPress={() => fetchAnalyticsDetail('new_users')}
               >
                 <View style={styles.chartHeader}>
                   <Text style={[styles.chartTitle, { color: theme.colors.text }]}>User Onboarding</Text>
                   <View style={styles.trendBadge}>
                     <ArrowUpRight size={14} color="#10B981" />
-                    <Text style={styles.trendText}>TAP FOR DETAILS</Text>
+                    <Text style={styles.trendText}>NEW REGISTRATIONS</Text>
                   </View>
                 </View>
                 <View style={styles.barChartContainer}>
@@ -2459,7 +2487,7 @@ export default function ModerationAdmin() {
                   })}
                   {analytics.users.growth.length === 0 && <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>No recent growth data</Text>}
                 </View>
-              </TouchableOpacity>
+              </View>
 
               <TouchableOpacity 
                 style={[styles.chartCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
@@ -2519,7 +2547,7 @@ export default function ModerationAdmin() {
                     );
                   })}
                 </View>
-                <Text style={[styles.heatmapLegend, { color: theme.colors.textSecondary }]}>Hours (0-23) • Darker = More posts</Text>
+                <Text style={[styles.heatmapLegend, { color: theme.colors.textSecondary }]}>Hours (0-23) • Darker = More activity (posts, comments, reactions)</Text>
               </View>
 
               {/* Zone Distribution - Pie Chart Style */}
@@ -2527,7 +2555,7 @@ export default function ModerationAdmin() {
                 <>
                   <View style={styles.sectionHeader}>
                     <PieChart size={18} color={theme.colors.primary} />
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>ZONE DISTRIBUTION</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>ACTIVE USERS BY ZONE</Text>
                   </View>
 
                   <View style={[styles.detailCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -2583,7 +2611,7 @@ export default function ModerationAdmin() {
                               {post.rusers?.emoji_icon || '👤'} @{post.rusers?.username || 'unknown'}
                             </Text>
                           </View>
-                          <Text style={[styles.topPostText, { color: theme.colors.text }]} numberOfLines={2}>{post.text}</Text>
+                          <Text style={[styles.topPostText, { color: theme.colors.text }]} numberOfLines={2}>{(post.text || '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/__/g, '').replace(/~~/g, '')}</Text>
                           <View style={styles.topPostStats}>
                             <Text style={[styles.topPostStat, { color: '#F59E0B' }]}>
                               {post.reaction_count} reactions
@@ -2639,7 +2667,7 @@ export default function ModerationAdmin() {
 
               <View style={[styles.detailCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Text style={[styles.detailTitle, { color: theme.colors.textSecondary }]}>USER SAFETY</Text>
-                <TouchableOpacity style={styles.progressRow} onPress={() => fetchAnalyticsDetail('users')}>
+                <View style={styles.progressRow}>
                   <View style={styles.progressLabelRow}>
                     <Text style={[styles.progressLabel, { color: theme.colors.text }]}>Active Users</Text>
                     <Text style={[styles.progressValue, { color: theme.colors.text }]}>{analytics.users.active}</Text>
@@ -2647,7 +2675,7 @@ export default function ModerationAdmin() {
                   <View style={styles.progressBarBg}>
                     <View style={[styles.progressBarFill, { width: `${(analytics.users.active / (analytics.summary.users || 1)) * 100}%`, backgroundColor: '#10B981' }]} />
                   </View>
-                </TouchableOpacity>
+                </View>
                 <TouchableOpacity style={styles.progressRow} onPress={() => fetchAnalyticsDetail('banned_users')}>
                   <View style={styles.progressLabelRow}>
                     <Text style={[styles.progressLabel, { color: theme.colors.text }]}>Banned Users</Text>
@@ -2657,6 +2685,15 @@ export default function ModerationAdmin() {
                     <View style={[styles.progressBarFill, { width: `${(analytics.users.banned / (analytics.summary.users || 1)) * 100}%`, backgroundColor: '#EF4444' }]} />
                   </View>
                 </TouchableOpacity>
+                <View style={styles.progressRow}>
+                  <View style={styles.progressLabelRow}>
+                    <Text style={[styles.progressLabel, { color: theme.colors.text }]}>Muted Users</Text>
+                    <Text style={[styles.progressValue, { color: theme.colors.text }]}>{analytics.users.muted || 0}</Text>
+                  </View>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${((analytics.users.muted || 0) / (analytics.summary.users || 1)) * 100}%`, backgroundColor: '#F59E0B' }]} />
+                  </View>
+                </View>
               </View>
 
               <View style={[styles.detailCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -2743,7 +2780,10 @@ export default function ModerationAdmin() {
                         }}
                       >
                         <Text style={[styles.commentUser, { color: theme.colors.primary }]}>@{comment.rusers?.username || 'unknown'}</Text>
-                        <Text style={[styles.commentText, { color: theme.colors.text }]} numberOfLines={2}>{comment.text}</Text>
+                        {comment.text ? <Text style={[styles.commentText, { color: theme.colors.text }]} numberOfLines={2}>{comment.text}</Text> : null}
+                        {comment.gif_url ? (
+                          <Image source={{ uri: comment.gif_url }} style={{ width: '100%', height: 80, borderRadius: 8, marginTop: 4 }} resizeMode="contain" />
+                        ) : null}
                         <Text style={[styles.commentTime, { color: theme.colors.textSecondary }]}>{new Date(comment.created_at).toLocaleDateString()}</Text>
                       </TouchableOpacity>
                     ))}
@@ -2946,6 +2986,7 @@ export default function ModerationAdmin() {
                             <Text style={styles.detailItemEmoji}>{item.reaction_type}</Text>
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.detailItemTitle, { color: theme.colors.primary }]}>@{item.rusers?.username || 'unknown'}</Text>
+                              {item.rposts?.text ? <Text style={[styles.detailItemText, { color: theme.colors.text }]} numberOfLines={1}>{item.rposts.text}</Text> : null}
                               <Text style={[styles.detailItemSubtitle, { color: theme.colors.textSecondary }]}>
                                 {new Date(item.created_at).toLocaleDateString()}
                               </Text>
@@ -2966,7 +3007,11 @@ export default function ModerationAdmin() {
                             <Text style={styles.detailItemEmoji}>💬</Text>
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.detailItemTitle, { color: theme.colors.primary }]}>@{item.rusers?.username || 'unknown'}</Text>
-                              <Text style={[styles.detailItemText, { color: theme.colors.text }]} numberOfLines={2}>{item.text}</Text>
+                              {item.text ? <Text style={[styles.detailItemText, { color: theme.colors.text }]} numberOfLines={2}>{item.text}</Text> : null}
+                              {item.gif_url ? (
+                                <Image source={{ uri: item.gif_url }} style={{ width: '100%', height: 60, borderRadius: 6, marginTop: 4 }} resizeMode="contain" />
+                              ) : null}
+                              {item.rposts?.text ? <Text style={[styles.detailItemSubtitle, { color: theme.colors.textSecondary }]} numberOfLines={1}>on: {item.rposts.text}</Text> : null}
                               <Text style={[styles.detailItemSubtitle, { color: theme.colors.textSecondary }]}>
                                 {new Date(item.created_at).toLocaleDateString()}
                               </Text>
@@ -2975,6 +3020,10 @@ export default function ModerationAdmin() {
                           </TouchableOpacity>
                         );
                       } else if (analyticsDetailModal === 'businesses' || analyticsDetailModal === 'talent') {
+                        const table = analyticsDetailModal === 'businesses' ? 'rbusinesses' : 'rtalent';
+                        const statuses = ['pending', 'approved', 'rejected', 'held'];
+                        const nextStatus = statuses[(statuses.indexOf(item.status) + 1) % statuses.length];
+                        const statusColors = { approved: '#10B981', pending: '#F59E0B', rejected: '#EF4444', held: '#A855F7' };
                         return (
                           <View style={[styles.detailListItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                             <Text style={styles.detailItemEmoji}>{analyticsDetailModal === 'businesses' ? '🏢' : '⭐'}</Text>
@@ -2984,15 +3033,18 @@ export default function ModerationAdmin() {
                                 {item.category} • by @{item.rusers?.username || 'unknown'}
                               </Text>
                             </View>
-                            <View style={[styles.statusBadge, { 
-                              backgroundColor: item.status === 'approved' ? '#10B98120' : item.status === 'pending' ? '#F59E0B20' : '#EF444420' 
-                            }]}>
+                            <TouchableOpacity 
+                              onPress={() => handleStatusChange(table, item.id, nextStatus)}
+                              style={[styles.statusBadge, { 
+                                backgroundColor: (statusColors[item.status] || '#888') + '20'
+                              }]}
+                            >
                               <Text style={[styles.statusBadgeText, { 
-                                color: item.status === 'approved' ? '#10B981' : item.status === 'pending' ? '#F59E0B' : '#EF4444' 
+                                color: statusColors[item.status] || '#888'
                               }]}>
                                 {item.status?.toUpperCase()}
                               </Text>
-                            </View>
+                            </TouchableOpacity>
                           </View>
                         );
                       } else if (analyticsDetailModal === 'zone') {
