@@ -351,6 +351,10 @@ export default function HelpContact() {
   const inputRef = useRef(null);
   const isSendingRef = useRef(false);
   const subRef = useRef(null);
+  const isNearBottomRef = useRef(true);
+  const contentHeightRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const layoutHeightRef = useRef(0);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -581,6 +585,7 @@ export default function HelpContact() {
     if (!text || isSendingRef.current) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    isNearBottomRef.current = true;
 
     const tempId = Date.now();
     const isChatMode = townyMode === 'chat';
@@ -958,7 +963,19 @@ export default function HelpContact() {
           data={messages}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.chatContent}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={(w, h) => {
+            contentHeightRef.current = h;
+            if (isNearBottomRef.current) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
+          onScroll={(e) => {
+            scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+            layoutHeightRef.current = e.nativeEvent.layoutMeasurement.height;
+            const distanceFromBottom = contentHeightRef.current - scrollOffsetRef.current - layoutHeightRef.current;
+            isNearBottomRef.current = distanceFromBottom < 150;
+          }}
+          scrollEventThrottle={100}
           renderItem={({ item }) => {
             const isMine = !item.is_from_admin;
             const isResolved = item.status === 'resolved';
