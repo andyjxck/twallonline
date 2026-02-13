@@ -426,16 +426,14 @@ export default function WebLayout({ children }) {
 
       {/* Stories Right Dock */}
       {!storiesCollapsed && (
-        <View style={styles.storiesDock}>
-          <View style={styles.storiesDockInner}>
-            <StoriesBar vertical reversed />
-            <TouchableOpacity
-              onPress={() => setStoriesCollapsed(true)}
-              style={styles.storiesCollapseBtn}
-            >
-              <ChevronRight size={12} color="rgba(255,255,255,0.4)" />
-            </TouchableOpacity>
-          </View>
+        <View style={styles.storiesDockInner}>
+          <StoriesBar vertical reversed />
+          <TouchableOpacity
+            onPress={() => setStoriesCollapsed(true)}
+            style={styles.storiesCollapseBtn}
+          >
+            <ChevronRight size={12} color="rgba(255,255,255,0.4)" />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -736,19 +734,11 @@ const styles = StyleSheet.create({
   },
 
   // ─── Stories Right Dock (mirrors left dock) ───
-  storiesDock: {
-    position: 'fixed',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: STORIES_WIDTH,
-    zIndex: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-    pointerEvents: 'box-none',
-  },
   storiesDockInner: {
+    position: 'fixed',
+    right: 8,
+    top: '50%',
+    transform: [{ translateY: '-50%' }],
     backgroundColor: 'rgba(20,20,30,0.85)',
     borderRadius: 20,
     borderWidth: 1,
@@ -762,7 +752,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 20,
     maxHeight: '80%',
-    pointerEvents: 'auto',
+    zIndex: 100,
   },
   storiesCollapseBtn: {
     width: 36,
