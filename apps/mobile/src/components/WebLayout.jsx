@@ -176,7 +176,7 @@ export default function WebLayout({ children }) {
             <TouchableOpacity onPress={() => navigate('/talent')} style={styles.mobileBottomItem} activeOpacity={0.7}>
               <Star size={20} color={pathname === '/talent' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMobileNavOpen(true)} style={styles.mobileBottomMenuBtn} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => setMobileNavOpen(prev => !prev)} style={styles.mobileBottomMenuBtn} activeOpacity={0.8}>
               <Menu size={18} color="#FFF" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigate('/businesses')} style={styles.mobileBottomItem} activeOpacity={0.7}>
@@ -420,7 +420,7 @@ export default function WebLayout({ children }) {
       )}
 
       {/* Main Content */}
-      <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: dockCollapsed ? 0 : DOCK_WIDTH, marginRight: storiesCollapsed ? 0 : STORIES_WIDTH }]}>
+      <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: dockCollapsed ? 0 : DOCK_WIDTH }]}>
         {children}
       </View>
 
