@@ -654,9 +654,9 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                       )}
                     </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                        <TouchableOpacity onPress={() => onFilterZone?.(item.zone_id)} disabled={item.city_id === 321 || !item.zone_id}>
+                        <TouchableOpacity onPress={() => onFilterZone?.(item.zone_id)} disabled={item.city_id === 349 || !item.zone_id}>
                           <Text style={[styles.metaLink, { color: theme.colors.textSecondary }]}>
-                            {(item.city_id === 321 || !item.zone_id) ? "Global" : item.zone?.name}
+                            {(item.city_id === 349 || !item.zone_id) ? "Global" : item.zone?.name}
                           </Text>
                         </TouchableOpacity>
                         <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>•</Text>

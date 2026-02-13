@@ -11,7 +11,7 @@ export const ShareCard = ({ post }) => {
 
   const hasImage = post.image_urls?.length > 0 || post.image_url;
   const imageUri = post.image_urls?.[0] || post.image_url;
-  const zoneName = (post.city_id === 321 || !post.zone_id) ? "Global" : (post.zone?.name || "Featured");
+  const zoneName = (post.city_id === 349 || !post.zone_id) ? "Global" : (post.zone?.name || "Featured");
   const displayName = post.is_anonymous ? "Anonymous" : (post.user?.username || 'user');
   const emoji = post.is_anonymous ? "👤" : (post.user?.emoji_icon || "👤");
   const bodyText = post.text

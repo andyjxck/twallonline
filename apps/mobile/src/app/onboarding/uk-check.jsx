@@ -27,7 +27,7 @@ export default function UkCheckScreen() {
   const handleNo = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setCity({
-      id: 321,
+      id: 349,
       name: "Global",
       source: "manual",
     });

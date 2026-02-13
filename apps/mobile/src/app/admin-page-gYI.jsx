@@ -474,7 +474,7 @@ export default function ModerationAdmin() {
 
               const zoneUserSets = {};
               zoneBreakdown.data?.forEach(p => {
-                const zoneName = (p.city_id === 321 || !p.zone_id) ? 'Global' : (p.rzones?.name || 'Unknown');
+                const zoneName = (p.city_id === 349 || !p.zone_id) ? 'Global' : (p.rzones?.name || 'Unknown');
                 if (!zoneUserSets[zoneName]) zoneUserSets[zoneName] = new Set();
                 if (p.user_id) zoneUserSets[zoneName].add(p.user_id);
               });

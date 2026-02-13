@@ -64,7 +64,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
-      if (feedView === 'city' && city_id && city_id !== 321) {
+      if (feedView === 'city' && city_id && city_id !== 349) {
         query = query.eq('city_id', city_id);
       } else if (feedView === 'zone' && zone_id) {
         query = query.eq('zone_id', zone_id);
@@ -177,7 +177,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       const { error } = await supabase.from('rstories').insert({
         user_id: user.id,
         image_url: publicUrl,
-        city_id: city_id !== 321 ? city_id : null,
+        city_id: city_id !== 349 ? city_id : null,
         zone_id: zone_id || null,
       });
 

@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export const useLocationStore = create(
   persist(
     (set, get) => ({
-      city_id: 321,
+      city_id: 349,
       city_name: "Global",
       city_source: null,
       zone_id: null,
@@ -15,9 +15,9 @@ export const useLocationStore = create(
       savedCity: null,
 
         setCity: (city) => {
-          if (city.id === 321) {
+          if (city.id === 349) {
             set({
-              city_id: 321,
+              city_id: 349,
               city_name: "Global",
               feedView: "global",
               zone_id: null,
@@ -58,7 +58,7 @@ export const useLocationStore = create(
         if (view === "global") {
           set({ 
             feedView: "global",
-            city_id: 321,
+            city_id: 349,
             city_name: "Global",
             zone_id: null,
             zone_name: null 
@@ -79,7 +79,7 @@ export const useLocationStore = create(
 
       clearLocation: () =>
         set({
-          city_id: 321,
+          city_id: 349,
           city_name: "Global",
           city_source: null,
           zone_id: null,
