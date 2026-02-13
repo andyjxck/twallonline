@@ -95,6 +95,7 @@ export default function UniversalFeed() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [blockedUserIds, setBlockedUserIds] = useState([]);
     const shareRef = useRef();
+  const reactionLockRef = useRef(new Set());
   const [isOnline, setIsOnline] = useState(true);
   const [pendingPosts, setPendingPosts] = useState([]);
   const [syncing, setSyncing] = useState(false);
@@ -345,6 +346,9 @@ return () => {
 
   const handleReaction = async (postId, type, currentlyReacted) => {
     if (!deviceId) return;
+    const lockKey = `${postId}_${type}`;
+    if (reactionLockRef.current.has(lockKey)) return;
+    reactionLockRef.current.add(lockKey);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       if (currentlyReacted) {
@@ -370,6 +374,7 @@ return () => {
       }
       fetchPosts(true);
     } catch (e) { console.error(e); }
+    finally { reactionLockRef.current.delete(lockKey); }
   };
 
   const onRefresh = useCallback(() => { 
