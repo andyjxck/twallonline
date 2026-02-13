@@ -148,7 +148,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   useEffect(() => {
     if (!item?.user || item.is_anonymous) return;
     const u = item.user;
-    const postIdentity = item.posted_as_identity || u.active_identity;
+    const postIdentity = item.posted_as_identity;
     if (postIdentity === 'talent' && u.talent_showcase_id) {
       supabase.from('rtalent').select('name, avatar_url').eq('id', u.talent_showcase_id).single()
         .then(({ data }) => { if (data) setShowcaseInfo(data); });
@@ -156,7 +156,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
       supabase.from('rbusinesses').select('name, avatar_url').eq('id', u.business_showcase_id).single()
         .then(({ data }) => { if (data) setShowcaseInfo(data); });
     }
-  }, [item?.posted_as_identity, item?.user?.active_identity, item?.user?.talent_showcase_id, item?.user?.business_showcase_id]);
+  }, [item?.posted_as_identity, item?.user?.talent_showcase_id, item?.user?.business_showcase_id]);
 
   const dynamicStyles = useMemo(() => StyleSheet.create({
     username: { ...styles.username, color: theme.colors.text },
@@ -641,7 +641,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                             </View>
                           )}
                           {(() => {
-                            const pid = item.posted_as_identity || item.user?.active_identity;
+                            const pid = item.posted_as_identity;
                             if (pid === 'business' && item.user?.business_showcase_id) return (
                               <View style={[styles.roleBadge, styles.businessBadge]}><Text style={styles.roleBadgeText}>Business</Text></View>
                             );
