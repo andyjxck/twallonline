@@ -187,7 +187,7 @@ export default function StoriesBar() {
       fetchStories();
     } catch (err) {
       console.error('Error creating story:', err);
-      toast.error('Failed to post story');
+      toast.error(err?.message || 'Failed to post story');
     } finally {
       setUploading(false);
     }
