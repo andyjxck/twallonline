@@ -318,8 +318,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   // Get the latest story thumbnail for a group (for the circle icon)
   const getGroupThumb = (group) => group.stories[0]?.image_url;
 
-  const THUMB = vertical ? 44 : STORY_SIZE;
-  const RING = vertical ? 50 : STORY_RING_SIZE;
+  const isMobileWeb = Platform.OS === 'web' && Dimensions.get('window').width < 768;
+  const THUMB = vertical ? 44 : isMobileWeb ? 48 : STORY_SIZE;
+  const RING = vertical ? 50 : isMobileWeb ? 54 : STORY_RING_SIZE;
 
   const renderStoryCircle = (group, isUser = false) => {
     const actualIdx = groupedStories.indexOf(group);
@@ -330,7 +331,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
     return (
       <TouchableOpacity
         key={isUser ? 'user-story' : group.userId}
-        style={vertical ? styles.storyItemVertical : styles.storyItem}
+        style={vertical ? styles.storyItemVertical : [styles.storyItem, isMobileWeb && { width: 60 }]}
         onPress={() => {
           if (isUser) {
             if (hasStory) {
