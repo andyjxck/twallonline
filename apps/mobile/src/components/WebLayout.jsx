@@ -14,6 +14,7 @@ import { useTheme } from '../utils/ThemeContext';
 import { Image } from 'expo-image';
 import { supabase } from '../utils/supabase';
 import StoriesBar from './StoriesBar';
+import AdBanner from './AdBanner';
 
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/pDXYmMhf';
 const DOCK_WIDTH = 72;
@@ -165,6 +166,9 @@ export default function WebLayout({ children }) {
     return (
       <View style={styles.root}>
         <View style={[styles.mainContent, { backgroundColor: theme.colors.background }]}>
+          <View style={{ alignItems: 'center', backgroundColor: '#000' }}>
+            <AdBanner width={320} height={50} />
+          </View>
           {children}
         </View>
 
@@ -421,6 +425,9 @@ export default function WebLayout({ children }) {
 
       {/* Main Content */}
       <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: dockCollapsed ? 0 : DOCK_WIDTH }]}>
+        <View style={{ alignItems: 'center', backgroundColor: '#000' }}>
+          <AdBanner width={728} height={90} />
+        </View>
         {children}
       </View>
 
