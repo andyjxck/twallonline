@@ -521,7 +521,7 @@ function createStyles(theme) {
       borderColor: '#e94560',
     },
     storyRingViewed: {
-      borderColor: theme.colors.border,
+      borderColor: '#22C55E',
     },
     storyRingAdd: {
       borderColor: theme.colors.border,
