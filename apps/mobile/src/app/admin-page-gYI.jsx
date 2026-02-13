@@ -421,7 +421,7 @@ export default function ModerationAdmin() {
                 supabase.from('rcomments').select('id, text, gif_url, user_id, post_id, created_at, rusers(username)').order('created_at', { ascending: false }).limit(10),
                 supabase.from('rhelp_messages').select('id', { count: 'exact', head: true }).neq('status', 'chat'),
                 supabase.from('rreports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-                supabase.from('rposts').select('zone_id, user_id, rzones(name)').eq('moderation_status', 'approved').gt('created_at', timeRangeDate),
+                supabase.from('rposts').select('zone_id, user_id, city_id, rzones(name)').eq('moderation_status', 'approved').gt('created_at', timeRangeDate),
                 supabase.from('rposts').select('created_at').eq('moderation_status', 'approved').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
                 supabase.from('rcomments').select('created_at').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
                 supabase.from('rreactions').select('created_at').gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
@@ -474,7 +474,7 @@ export default function ModerationAdmin() {
 
               const zoneUserSets = {};
               zoneBreakdown.data?.forEach(p => {
-                const zoneName = p.rzones?.name || 'Unknown';
+                const zoneName = (p.city_id === 321 || !p.zone_id) ? 'Global' : (p.rzones?.name || 'Unknown');
                 if (!zoneUserSets[zoneName]) zoneUserSets[zoneName] = new Set();
                 if (p.user_id) zoneUserSets[zoneName].add(p.user_id);
               });
