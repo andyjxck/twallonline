@@ -63,6 +63,7 @@ import NotificationPanel from "./NotificationPanel";
 import { PostComposer } from "./PostComposer";
 import { ShareManager } from "./ShareManager";
 import { BannerAd } from "@/components/BannerAd";
+import AdBanner from "./AdBanner";
 import PostItem from "./PostItem";
 import StoriesBar from "./StoriesBar";
 import { subscribeToUnreadCount, sendNotification, sendReactionNotification } from "../utils/notifications";
@@ -526,7 +527,7 @@ if (isOnline) syncPendingPosts();
           ListHeaderComponent={
             <View style={{ paddingTop: 12 }}>
               {(Platform.OS !== 'web' || Dimensions.get('window').width < 768) && <StoriesBar />}
-              <BannerAd />
+              {Platform.OS === 'web' ? <AdBanner width={Dimensions.get('window').width < 768 ? 320 : 728} height={Dimensions.get('window').width < 768 ? 50 : 90} /> : <BannerAd />}
               {isComposerExpanded ? (
                   <View style={[styles.inlineComposerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                     <PostComposer 
