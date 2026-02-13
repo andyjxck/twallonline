@@ -210,9 +210,9 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   const fakeCount = reactions.filter(r => r.reaction_type === 'fake').length;
   
   const userReactions = {
-    helpful: reactions.some(r => r.reaction_type === 'helpful' && r.device_id === deviceId),
-    superlike: reactions.some(r => r.reaction_type === 'superlike' && r.device_id === deviceId),
-    fake: reactions.some(r => r.reaction_type === 'fake' && r.device_id === deviceId),
+    helpful: reactions.some(r => r.reaction_type === 'helpful' && (r.device_id === deviceId || (user?.id && r.user_id === user.id))),
+    superlike: reactions.some(r => r.reaction_type === 'superlike' && (r.device_id === deviceId || (user?.id && r.user_id === user.id))),
+    fake: reactions.some(r => r.reaction_type === 'fake' && (r.device_id === deviceId || (user?.id && r.user_id === user.id))),
   };
 
   const shouldBlur = fakeCount > 5 && fakeCount > helpfulCount;

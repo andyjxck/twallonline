@@ -167,7 +167,7 @@ return () => {
       try {
         const { data: highlightedPost } = await supabase
           .from("rposts")
-          .select(`id, title, text, created_at, user_id, zone_id, tag_id, image_url, image_urls, is_anonymous, moderation_status, is_deleted, is_blurred, blur_reason, comments_disabled, city_id, cta_type, cta_group_id, posted_as_identity, user:rusers (*), zone:rzones (name), tag:rtags (name), poll_id, reactions:rreactions (reaction_type, device_id)`)
+          .select(`id, title, text, created_at, user_id, zone_id, tag_id, image_url, image_urls, is_anonymous, moderation_status, is_deleted, is_blurred, blur_reason, comments_disabled, city_id, cta_type, cta_group_id, posted_as_identity, user:rusers (*), zone:rzones (name), tag:rtags (name), poll_id, reactions:rreactions (reaction_type, device_id, user_id)`)
           .eq("id", highlightedPostId)
           .single();
         
@@ -256,7 +256,7 @@ return () => {
     const fetchPosts = async (isRefreshing = false) => {
       if (!isRefreshing) setLoading(true);
         try {
-        let query = supabase.from("rposts").select(`id, title, text, created_at, user_id, zone_id, tag_id, image_url, image_urls, is_anonymous, moderation_status, is_deleted, is_blurred, blur_reason, comments_disabled, city_id, cta_type, cta_group_id, posted_as_identity, user:rusers (*), zone:rzones (name), tag:rtags (name), poll_id, reactions:rreactions (reaction_type, device_id)`).eq("is_deleted", false).eq("moderation_status", "approved");
+        let query = supabase.from("rposts").select(`id, title, text, created_at, user_id, zone_id, tag_id, image_url, image_urls, is_anonymous, moderation_status, is_deleted, is_blurred, blur_reason, comments_disabled, city_id, cta_type, cta_group_id, posted_as_identity, user:rusers (*), zone:rzones (name), tag:rtags (name), poll_id, reactions:rreactions (reaction_type, device_id, user_id)`).eq("is_deleted", false).eq("moderation_status", "approved");
         
         if (feedView === "global") {
           query = query.eq("city_id", 349);
@@ -352,8 +352,25 @@ return () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       if (currentlyReacted) {
-        await supabase.from('rreactions').delete().match({ post_id: postId, reaction_type: type, device_id: deviceId });
+        // Delete by user_id if logged in, fallback to device_id for anonymous
+        const deleteMatch = user?.id
+          ? { post_id: postId, reaction_type: type, user_id: user.id }
+          : { post_id: postId, reaction_type: type, device_id: deviceId };
+        await supabase.from('rreactions').delete().match(deleteMatch);
       } else {
+        // Check if user already reacted (from another device)
+        if (user?.id) {
+          const { data: existing } = await supabase.from('rreactions')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('reaction_type', type)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (existing) {
+            fetchPosts(true);
+            return;
+          }
+        }
         const { data: reactionData } = await supabase.from('rreactions').insert({ 
           post_id: postId, 
           reaction_type: type, 
