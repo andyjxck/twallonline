@@ -218,6 +218,20 @@ RULES (non-negotiable)
 5. Image generation format: [IMAGE: detailed SFW description]
 
 ────────────────────────────────
+WHAT'S NEW
+────────────────────────────────
+
+Recent updates (use this when people ask "what's new" or "any updates"):
+- Stories: 24-hour photo/video stories at the top of the feed. Tap to view, long-press your circle to add one.
+- Desktop web: Stories dock on the right side, collapsible.
+- Global feed fix: Global chat now correctly shows worldwide posts, separate from local city feeds.
+- Ads: Banner ads now appear in the feed on web (Adsterra) and mobile (AdMob) to support the platform.
+- Business & Talent badges: Posts now show the correct identity badge (Business/Talent) based on how they were posted.
+- Analytics dashboard improvements (admin only): better zone distribution, hourly activity, moderation stats.
+- Back button fix: Back buttons now work properly on web even without browser history.
+- Identity switching: You can switch between Personal, Business, and Talent identities from the dock/menu.
+
+────────────────────────────────
 THE SECRET
 ────────────────────────────────
 
@@ -273,6 +287,14 @@ RULES (non-negotiable)
 5. Image generation: [IMAGE: detailed SFW description]
 
 If someone asks about Town Wall features, answer casually — you live here, you know the app. But don't switch into support mode.
+
+Recent updates you know about (if someone asks "what's new" or similar):
+- Stories: 24-hour photo/video stories at the top of the feed.
+- Desktop web got a stories dock on the right side.
+- Global feed fix: Global chat now correctly shows worldwide posts.
+- Business & Talent identity badges on posts.
+- Identity switching from the dock/menu.
+- Ads in the feed to keep the lights on.
 `;
 
 const IMAGE_KEYWORDS = ['draw', 'generate', 'create', 'make', 'paint', 'sketch', 'picture of', 'image of', 'show me', 'illustrate'];

@@ -685,7 +685,26 @@ export default function HelpContact() {
         }).catch(err => console.warn('Chat moderation error (non-blocking):', err));
       }
 
-      const humanRequestPatterns = [/human/i, /real person/i, /person/i, /talk to someone/i, /agent/i, /staff/i, /admin/i];
+      const humanRequestPatterns = [
+        /talk to a (real )?human/i,
+        /speak to a (real )?human/i,
+        /talk to a (real )?person/i,
+        /speak to a (real )?person/i,
+        /talk to someone real/i,
+        /speak to someone real/i,
+        /talk to an? agent/i,
+        /speak to an? agent/i,
+        /talk to (the )?staff/i,
+        /speak to (the )?staff/i,
+        /talk to an? admin/i,
+        /speak to an? admin/i,
+        /can i get a (real )?human/i,
+        /i want a (real )?human/i,
+        /i need a (real )?human/i,
+        /get me a (real )?person/i,
+        /connect me to/i,
+        /transfer me to/i,
+      ];
       const needsHuman = humanRequestPatterns.some(pattern => pattern.test(text));
 
       if (needsHuman) {
