@@ -525,7 +525,7 @@ if (isOnline) syncPendingPosts();
             data={postsWithAds}
           ListHeaderComponent={
             <View style={{ paddingTop: 12 }}>
-              <StoriesBar />
+              {(Platform.OS !== 'web' || Dimensions.get('window').width < 768) && <StoriesBar />}
               <BannerAd />
               {isComposerExpanded ? (
                   <View style={[styles.inlineComposerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>

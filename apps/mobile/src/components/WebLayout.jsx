@@ -13,9 +13,11 @@ import { useChatStore, useAuthStore } from '../utils/auth';
 import { useTheme } from '../utils/ThemeContext';
 import { Image } from 'expo-image';
 import { supabase } from '../utils/supabase';
+import StoriesBar from './StoriesBar';
 
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/pDXYmMhf';
 const DOCK_WIDTH = 72;
+const STORIES_WIDTH = 90;
 
 export default function WebLayout({ children }) {
   const router = useRouter();
@@ -28,6 +30,7 @@ export default function WebLayout({ children }) {
   const [submitting, setSubmitting] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [storiesCollapsed, setStoriesCollapsed] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [townwallUserId, setTownwallUserId] = useState(null);
@@ -417,9 +420,36 @@ export default function WebLayout({ children }) {
       )}
 
       {/* Main Content */}
-      <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: dockCollapsed ? 0 : DOCK_WIDTH }]}>
+      <View style={[styles.mainContent, { backgroundColor: theme.colors.background, marginLeft: dockCollapsed ? 0 : DOCK_WIDTH, marginRight: storiesCollapsed ? 0 : STORIES_WIDTH }]}>
         {children}
       </View>
+
+      {/* Stories Right Sidebar */}
+      {!storiesCollapsed && (
+        <View style={[styles.storiesSidebar, { borderLeftColor: theme.colors.border }]}>
+          <View style={styles.storiesSidebarInner}>
+            <Text style={[styles.storiesSidebarTitle, { color: theme.colors.textSecondary }]}>STORIES</Text>
+            <StoriesBar vertical />
+          </View>
+          <TouchableOpacity
+            onPress={() => setStoriesCollapsed(true)}
+            style={styles.storiesCollapseBtn}
+          >
+            <ChevronRight size={14} color="rgba(255,255,255,0.5)" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Stories collapsed handle */}
+      {storiesCollapsed && (
+        <TouchableOpacity
+          onPress={() => setStoriesCollapsed(false)}
+          activeOpacity={0.8}
+          style={styles.storiesHandle}
+        >
+          <ChevronLeft size={16} color="rgba(255,255,255,0.7)" />
+        </TouchableOpacity>
+      )}
 
       {/* Get the App Modal */}
       {showGetApp && (
@@ -703,6 +733,62 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    cursor: 'pointer',
+  },
+
+  // ─── Stories Right Sidebar ───
+  storiesSidebar: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: STORIES_WIDTH,
+    zIndex: 100,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderLeftWidth: 1,
+    backgroundColor: 'rgba(10,10,18,0.6)',
+  },
+  storiesSidebarInner: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+  },
+  storiesSidebarTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  storiesCollapseBtn: {
+    width: 36,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    cursor: 'pointer',
+  },
+  storiesHandle: {
+    position: 'fixed',
+    right: 0,
+    top: '50%',
+    transform: [{ translateY: -24 }],
+    width: 20,
+    height: 48,
+    borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+    backgroundColor: 'rgba(20,20,30,0.85)',
+    borderWidth: 1,
+    borderRightWidth: 0,
+    borderColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 200,
     cursor: 'pointer',
   },
 

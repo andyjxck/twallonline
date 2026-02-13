@@ -28,7 +28,7 @@ const STORY_SIZE = 68;
 const STORY_RING_SIZE = 74;
 const IMAGE_DURATION = 5000;
 
-export default function StoriesBar() {
+export default function StoriesBar({ vertical = false }) {
   const { theme, isLight } = useTheme();
   const user = useAuthStore(state => state.auth);
   const { city_id, zone_id, feedView } = useLocationStore();
@@ -321,10 +321,11 @@ export default function StoriesBar() {
   return (
     <View>
       <ScrollView
-        horizontal
+        horizontal={!vertical}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContainer}
-        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={vertical ? styles.scrollContainerVertical : styles.scrollContainer}
+        style={vertical ? styles.scrollViewVertical : styles.scrollView}
       >
         {/* Add story button */}
         <TouchableOpacity
@@ -472,10 +473,19 @@ function createStyles(theme) {
     scrollView: {
       marginBottom: 8,
     },
+    scrollViewVertical: {
+      flex: 1,
+    },
     scrollContainer: {
       paddingHorizontal: 8,
       paddingVertical: 8,
       gap: 12,
+    },
+    scrollContainerVertical: {
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+      gap: 12,
+      alignItems: 'center',
     },
     storyItem: {
       alignItems: 'center',
