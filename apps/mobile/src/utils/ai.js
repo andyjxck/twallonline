@@ -24,7 +24,7 @@ AUTOMATIC REJECT - Any content containing:
 2. Violence/Gore - Threats, graphic violence, harm to people/animals, weapons glorification
 3. Hate speech - Racism, sexism, homophobia, transphobia, religious hate, discrimination
 4. Harassment/Bullying - Personal attacks, targeted negativity, doxxing, stalking behavior
-5. Profanity/Slurs - Swear words, slurs, offensive language (even partially censored like "f*ck")
+5. No slurs - even if censored
 6. Illegal activity - Drug use/sales, fraud, scams, illegal services
 7. Spam - Repetitive content, excessive self-promotion, gibberish, bot-like behavior
 8. Misinformation - Dangerous health claims, conspiracy theories presented as fact

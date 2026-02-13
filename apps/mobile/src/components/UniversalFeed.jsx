@@ -64,6 +64,7 @@ import { PostComposer } from "./PostComposer";
 import { ShareManager } from "./ShareManager";
 import { BannerAd } from "@/components/BannerAd";
 import PostItem from "./PostItem";
+import StoriesBar from "./StoriesBar";
 import { subscribeToUnreadCount, sendNotification, sendReactionNotification } from "../utils/notifications";
 import { offlineStorage, syncService, subscribeToNetworkChanges, checkNetworkStatus } from "../utils/offline";
 import { useLocationStore } from "../utils/locationStore";
@@ -524,6 +525,7 @@ if (isOnline) syncPendingPosts();
             data={postsWithAds}
           ListHeaderComponent={
             <View style={{ paddingTop: 12 }}>
+              <StoriesBar />
               <BannerAd />
               {isComposerExpanded ? (
                   <View style={[styles.inlineComposerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
