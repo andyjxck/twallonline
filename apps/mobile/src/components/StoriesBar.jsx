@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
-  TextInput,
   ActivityIndicator,
   Dimensions,
   Platform,
@@ -13,28 +12,21 @@ import {
   Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { Plus, X, Camera, Type, ChevronLeft, ChevronRight, Eye } from 'lucide-react-native';
+import { Plus, X } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
 import { useTheme } from '../utils/ThemeContext';
 import { useAuthStore } from '../utils/auth';
 import { useLocationStore } from '../utils/locationStore';
 import { getBlockedUserIds } from '../utils/blocking';
-import { moderateContent } from '../utils/ai';
 import { toast } from 'sonner-native';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STORY_SIZE = 68;
 const STORY_RING_SIZE = 74;
-const STORY_DURATION = 5000;
-
-const BACKGROUND_COLORS = [
-  '#000000', '#1a1a2e', '#16213e', '#0f3460',
-  '#e94560', '#533483', '#2b2d42', '#8d99ae',
-  '#ef476f', '#ffd166', '#06d6a0', '#118ab2',
-  '#073b4c', '#264653', '#2a9d8f', '#e76f51',
-];
+const IMAGE_DURATION = 5000;
 
 export default function StoriesBar() {
   const { theme, isLight } = useTheme();
@@ -45,14 +37,6 @@ export default function StoriesBar() {
   const [groupedStories, setGroupedStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewedStoryIds, setViewedStoryIds] = useState(new Set());
-  const [blockedUserIds, setBlockedUserIds] = useState([]);
-
-  // Creation state
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createMode, setCreateMode] = useState(null); // 'photo' | 'text'
-  const [storyImage, setStoryImage] = useState(null);
-  const [storyText, setStoryText] = useState('');
-  const [storyBgColor, setStoryBgColor] = useState('#000000');
   const [uploading, setUploading] = useState(false);
 
   // Viewer state
@@ -61,8 +45,15 @@ export default function StoriesBar() {
   const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const progressTimer = useRef(null);
+  const videoRef = useRef(null);
 
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const isVideo = (url) => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return lower.includes('.mp4') || lower.includes('.mov') || lower.includes('.avi') || lower.includes('.webm') || lower.includes('video');
+  };
 
   // Fetch stories
   const fetchStories = useCallback(async () => {
@@ -83,8 +74,6 @@ export default function StoriesBar() {
       if (error) throw error;
 
       const blocked = await getBlockedUserIds(user?.id);
-      setBlockedUserIds(blocked);
-
       const filtered = (data || []).filter(s => !blocked.includes(s.user_id));
       setStories(filtered);
 
@@ -103,7 +92,6 @@ export default function StoriesBar() {
         groups[uid].stories.push(story);
       });
 
-      // Sort: current user first, then by latest story
       const sorted = Object.values(groups).sort((a, b) => {
         if (a.userId === user?.id) return -1;
         if (b.userId === user?.id) return 1;
@@ -118,7 +106,6 @@ export default function StoriesBar() {
     }
   }, [user?.id, city_id, zone_id, feedView]);
 
-  // Fetch viewed stories
   const fetchViewedStories = useCallback(async () => {
     if (!user?.id) return;
     try {
@@ -146,82 +133,57 @@ export default function StoriesBar() {
     return () => { supabase.removeChannel(sub); };
   }, [fetchStories, fetchViewedStories]);
 
-  // Check if user has an active story
   const userHasStory = groupedStories.some(g => g.userId === user?.id);
 
-  // Check if a group has all stories viewed
   const isGroupViewed = (group) => {
     return group.stories.every(s => viewedStoryIds.has(s.id));
   };
 
   // ─── CREATION ───────────────────────────────────────────
 
-  const pickImage = async () => {
+  const pickAndUploadMedia = async () => {
+    if (!user?.id) {
+      toast.error('Sign in to post a story');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ['images', 'videos'],
       allowsEditing: true,
-      aspect: [9, 16],
       quality: 0.8,
     });
-    if (!result.canceled) {
-      setStoryImage(result.assets[0]);
-      setCreateMode('photo');
-    }
-  };
 
-  const handleCreateStory = async () => {
-    if (!user?.id) {
-      toast.error('Please sign in to post a story');
-      return;
-    }
-    if (createMode === 'text' && !storyText.trim()) {
-      toast.error('Please enter some text');
-      return;
-    }
-    if (createMode === 'photo' && !storyImage) {
-      toast.error('Please select an image');
-      return;
-    }
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    const isVid = asset.type === 'video';
 
     setUploading(true);
-    try {
-      // Moderate content
-      const textToModerate = storyText || '';
-      if (textToModerate.trim()) {
-        const modResult = await moderateContent(textToModerate);
-        if (modResult.status === 'rejected') {
-          toast.error(modResult.reason || 'Content not allowed');
-          setUploading(false);
-          return;
-        }
-      }
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      let imageUrl = null;
-      if (createMode === 'photo' && storyImage) {
-        const fileExt = storyImage.uri.split('.').pop() || 'jpg';
-        const fileName = `story_${user.id}_${Date.now()}.${fileExt}`;
-        const arrayBuffer = await (await fetch(storyImage.uri)).arrayBuffer();
-        const { error: uploadError } = await supabase.storage
-          .from('stories')
-          .upload(fileName, arrayBuffer, { contentType: `image/${fileExt}`, upsert: true });
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('stories').getPublicUrl(fileName);
-        imageUrl = publicUrl;
-      }
+    try {
+      const fileExt = asset.uri.split('.').pop() || (isVid ? 'mp4' : 'jpg');
+      const fileName = `story_${user.id}_${Date.now()}.${fileExt}`;
+      const contentType = isVid ? `video/${fileExt}` : `image/${fileExt}`;
+      const arrayBuffer = await (await fetch(asset.uri)).arrayBuffer();
+
+      const { error: uploadError } = await supabase.storage
+        .from('stories')
+        .upload(fileName, arrayBuffer, { contentType, upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('stories').getPublicUrl(fileName);
 
       const { error } = await supabase.from('rstories').insert({
         user_id: user.id,
-        image_url: imageUrl,
-        text: storyText.trim() || null,
-        background_color: createMode === 'text' ? storyBgColor : '#000000',
+        image_url: publicUrl,
         city_id: city_id !== 321 ? city_id : null,
         zone_id: zone_id || null,
       });
 
       if (error) throw error;
 
-      toast.success('Story posted!');
-      resetCreateState();
+      toast.success('Story posted');
       fetchStories();
     } catch (err) {
       console.error('Error creating story:', err);
@@ -231,14 +193,6 @@ export default function StoriesBar() {
     }
   };
 
-  const resetCreateState = () => {
-    setShowCreateModal(false);
-    setCreateMode(null);
-    setStoryImage(null);
-    setStoryText('');
-    setStoryBgColor('#000000');
-  };
-
   // ─── VIEWER ─────────────────────────────────────────────
 
   const openViewer = (groupIndex) => {
@@ -246,7 +200,8 @@ export default function StoriesBar() {
     setViewerStoryIndex(0);
     setViewerVisible(true);
     markAsViewed(groupedStories[groupIndex]?.stories[0]?.id);
-    startProgress();
+    const story = groupedStories[groupIndex]?.stories[0];
+    if (!isVideo(story?.image_url)) startProgress(IMAGE_DURATION);
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
@@ -255,12 +210,12 @@ export default function StoriesBar() {
     stopProgress();
   };
 
-  const startProgress = () => {
+  const startProgress = (duration) => {
     progressAnim.setValue(0);
     stopProgress();
     progressTimer.current = Animated.timing(progressAnim, {
       toValue: 1,
-      duration: STORY_DURATION,
+      duration,
       useNativeDriver: false,
     });
     progressTimer.current.start(({ finished }) => {
@@ -282,13 +237,17 @@ export default function StoriesBar() {
       const nextIdx = viewerStoryIndex + 1;
       setViewerStoryIndex(nextIdx);
       markAsViewed(currentGroup.stories[nextIdx]?.id);
-      startProgress();
+      const nextStory = currentGroup.stories[nextIdx];
+      if (!isVideo(nextStory?.image_url)) startProgress(IMAGE_DURATION);
+      else stopProgress();
     } else if (viewerGroupIndex < groupedStories.length - 1) {
       const nextGroupIdx = viewerGroupIndex + 1;
       setViewerGroupIndex(nextGroupIdx);
       setViewerStoryIndex(0);
       markAsViewed(groupedStories[nextGroupIdx]?.stories[0]?.id);
-      startProgress();
+      const nextStory = groupedStories[nextGroupIdx]?.stories[0];
+      if (!isVideo(nextStory?.image_url)) startProgress(IMAGE_DURATION);
+      else stopProgress();
     } else {
       closeViewer();
     }
@@ -298,14 +257,22 @@ export default function StoriesBar() {
     if (viewerStoryIndex > 0) {
       const prevIdx = viewerStoryIndex - 1;
       setViewerStoryIndex(prevIdx);
-      startProgress();
+      const prevStory = groupedStories[viewerGroupIndex]?.stories[prevIdx];
+      if (!isVideo(prevStory?.image_url)) startProgress(IMAGE_DURATION);
+      else stopProgress();
     } else if (viewerGroupIndex > 0) {
       const prevGroupIdx = viewerGroupIndex - 1;
       const prevGroup = groupedStories[prevGroupIdx];
       setViewerGroupIndex(prevGroupIdx);
       setViewerStoryIndex(prevGroup.stories.length - 1);
-      startProgress();
+      const prevStory = prevGroup.stories[prevGroup.stories.length - 1];
+      if (!isVideo(prevStory?.image_url)) startProgress(IMAGE_DURATION);
+      else stopProgress();
     }
+  };
+
+  const handleVideoEnd = () => {
+    goNextStory();
   };
 
   const markAsViewed = async (storyId) => {
@@ -336,68 +303,66 @@ export default function StoriesBar() {
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'now';
     if (mins < 60) return `${mins}m`;
-    const hrs = Math.floor(mins / 60);
-    return `${hrs}h`;
+    return `${Math.floor(mins / 60)}h`;
   };
 
   // Current story in viewer
   const currentViewerGroup = groupedStories[viewerGroupIndex];
   const currentViewerStory = currentViewerGroup?.stories[viewerStoryIndex];
+  const currentIsVideo = isVideo(currentViewerStory?.image_url);
 
   // ─── RENDER ─────────────────────────────────────────────
 
   if (loading && stories.length === 0) return null;
 
+  // Get the latest story thumbnail for a group (for the circle icon)
+  const getGroupThumb = (group) => group.stories[0]?.image_url;
+
   return (
     <View>
-      {/* Stories horizontal scroll bar */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
         style={styles.scrollView}
       >
-        {/* Your Story / Add button */}
+        {/* Add story button */}
         <TouchableOpacity
           style={styles.storyItem}
           onPress={() => {
-            if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             if (userHasStory) {
               const idx = groupedStories.findIndex(g => g.userId === user?.id);
               if (idx >= 0) openViewer(idx);
             } else {
-              setShowCreateModal(true);
+              pickAndUploadMedia();
             }
           }}
-          onLongPress={() => {
-            if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setShowCreateModal(true);
-          }}
+          onLongPress={() => pickAndUploadMedia()}
           activeOpacity={0.7}
         >
           <View style={[styles.storyRing, userHasStory ? styles.storyRingActive : styles.storyRingAdd]}>
-            {user?.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.storyAvatar} />
-            ) : (
-              <View style={[styles.storyEmojiContainer, { backgroundColor: theme.colors.surface }]}>
-                <Text style={styles.storyEmoji}>{user?.emoji_icon || '👤'}</Text>
+            {userHasStory ? (
+              <Image source={{ uri: getGroupThumb(groupedStories.find(g => g.userId === user?.id)) }} style={styles.storyThumb} />
+            ) : uploading ? (
+              <View style={[styles.storyThumbPlaceholder, { backgroundColor: theme.colors.surface }]}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
               </View>
-            )}
-            {!userHasStory && (
-              <View style={[styles.addBadge, { backgroundColor: theme.colors.primary }]}>
-                <Plus size={12} color={isLight ? '#FFF' : '#000'} />
+            ) : (
+              <View style={[styles.storyThumbPlaceholder, { backgroundColor: theme.colors.surface }]}>
+                <Plus size={28} color={theme.colors.textSecondary} />
               </View>
             )}
           </View>
           <Text style={[styles.storyUsername, { color: theme.colors.text }]} numberOfLines={1}>
-            {userHasStory ? 'Your story' : 'Add story'}
+            {uploading ? 'Posting...' : userHasStory ? 'Your story' : 'Add story'}
           </Text>
         </TouchableOpacity>
 
         {/* Other users' stories */}
-        {groupedStories.filter(g => g.userId !== user?.id).map((group, idx) => {
+        {groupedStories.filter(g => g.userId !== user?.id).map((group) => {
           const actualIdx = groupedStories.indexOf(group);
           const viewed = isGroupViewed(group);
+          const thumb = getGroupThumb(group);
           return (
             <TouchableOpacity
               key={group.userId}
@@ -406,10 +371,10 @@ export default function StoriesBar() {
               activeOpacity={0.7}
             >
               <View style={[styles.storyRing, viewed ? styles.storyRingViewed : styles.storyRingActive]}>
-                {group.user?.avatar_url ? (
-                  <Image source={{ uri: group.user.avatar_url }} style={styles.storyAvatar} />
+                {thumb ? (
+                  <Image source={{ uri: thumb }} style={styles.storyThumb} />
                 ) : (
-                  <View style={[styles.storyEmojiContainer, { backgroundColor: theme.colors.surface }]}>
+                  <View style={[styles.storyThumbPlaceholder, { backgroundColor: theme.colors.surface }]}>
                     <Text style={styles.storyEmoji}>{group.user?.emoji_icon || '👤'}</Text>
                   </View>
                 )}
@@ -422,103 +387,6 @@ export default function StoriesBar() {
         })}
       </ScrollView>
 
-      {/* ─── CREATE MODAL ─────────────────────────────── */}
-      <Modal visible={showCreateModal} animationType="slide" transparent={false}>
-        <View style={[styles.createContainer, { backgroundColor: createMode === 'text' ? storyBgColor : theme.colors.background }]}>
-          {/* Header */}
-          <View style={[styles.createHeader, { paddingTop: Platform.OS === 'web' ? 16 : 50 }]}>
-            <TouchableOpacity onPress={resetCreateState} style={styles.createCloseBtn}>
-              <X size={24} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.createTitle}>
-              {createMode ? (createMode === 'photo' ? 'Photo Story' : 'Text Story') : 'New Story'}
-            </Text>
-            {createMode && (
-              <TouchableOpacity
-                onPress={handleCreateStory}
-                disabled={uploading}
-                style={[styles.createPostBtn, { backgroundColor: theme.colors.primary }]}
-              >
-                {uploading ? (
-                  <ActivityIndicator size="small" color={isLight ? '#FFF' : '#000'} />
-                ) : (
-                  <Text style={[styles.createPostBtnText, { color: isLight ? '#FFF' : '#000' }]}>Post</Text>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Mode selection */}
-          {!createMode && (
-            <View style={styles.modeSelection}>
-              <TouchableOpacity
-                style={[styles.modeBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                onPress={() => pickImage()}
-              >
-                <Camera size={40} color={theme.colors.primary} />
-                <Text style={[styles.modeBtnText, { color: theme.colors.text }]}>Photo</Text>
-                <Text style={[styles.modeBtnDesc, { color: theme.colors.textSecondary }]}>Upload a photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modeBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                onPress={() => setCreateMode('text')}
-              >
-                <Type size={40} color={theme.colors.primary} />
-                <Text style={[styles.modeBtnText, { color: theme.colors.text }]}>Text</Text>
-                <Text style={[styles.modeBtnDesc, { color: theme.colors.textSecondary }]}>Colored background</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Photo preview */}
-          {createMode === 'photo' && storyImage && (
-            <View style={styles.photoPreview}>
-              <Image source={{ uri: storyImage.uri }} style={styles.photoPreviewImage} contentFit="contain" />
-              <View style={styles.photoTextOverlay}>
-                <TextInput
-                  style={styles.photoTextInput}
-                  placeholder="Add text (optional)..."
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  value={storyText}
-                  onChangeText={setStoryText}
-                  multiline
-                  maxLength={200}
-                />
-              </View>
-            </View>
-          )}
-
-          {/* Text story editor */}
-          {createMode === 'text' && (
-            <View style={styles.textEditor}>
-              <TextInput
-                style={styles.textStoryInput}
-                placeholder="Type your story..."
-                placeholderTextColor="rgba(255,255,255,0.5)"
-                value={storyText}
-                onChangeText={setStoryText}
-                multiline
-                maxLength={300}
-                autoFocus
-              />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorPicker}>
-                {BACKGROUND_COLORS.map(color => (
-                  <TouchableOpacity
-                    key={color}
-                    style={[
-                      styles.colorOption,
-                      { backgroundColor: color },
-                      storyBgColor === color && styles.colorOptionSelected,
-                    ]}
-                    onPress={() => setStoryBgColor(color)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      </Modal>
-
       {/* ─── STORY VIEWER ─────────────────────────────── */}
       <Modal visible={viewerVisible} animationType="fade" transparent={Platform.OS === 'web'}>
         <View style={[styles.viewerContainer, Platform.OS === 'web' && styles.viewerContainerWeb]}>
@@ -528,41 +396,55 @@ export default function StoriesBar() {
               onPress={handleViewerTap}
               style={styles.viewerTouchable}
             >
-              {/* Background */}
-              {currentViewerStory.image_url ? (
+              {/* Media */}
+              {currentIsVideo ? (
+                <Video
+                  ref={videoRef}
+                  source={{ uri: currentViewerStory.image_url }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay
+                  isLooping={false}
+                  onPlaybackStatusUpdate={(status) => {
+                    if (status.didJustFinish) handleVideoEnd();
+                  }}
+                />
+              ) : (
                 <Image
                   source={{ uri: currentViewerStory.image_url }}
                   style={StyleSheet.absoluteFill}
-                  contentFit="cover"
+                  contentFit="contain"
                 />
-              ) : (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: currentViewerStory.background_color || '#000' }]} />
               )}
 
-              {/* Dark overlay for readability */}
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.2)' }]} />
+              {/* Dim overlay */}
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
 
               {/* Progress bars */}
               <View style={[styles.progressContainer, { paddingTop: Platform.OS === 'web' ? 16 : 50 }]}>
                 {currentViewerGroup.stories.map((s, i) => (
                   <View key={s.id} style={styles.progressBarBg}>
-                    <Animated.View
-                      style={[
-                        styles.progressBarFill,
-                        {
-                          width: i < viewerStoryIndex ? '100%' :
-                            i === viewerStoryIndex ? progressAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: ['0%', '100%'],
-                            }) : '0%',
-                        },
-                      ]}
-                    />
+                    {currentIsVideo && i === viewerStoryIndex ? (
+                      <View style={[styles.progressBarFill, { width: '100%', opacity: 0.5 }]} />
+                    ) : (
+                      <Animated.View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: i < viewerStoryIndex ? '100%' :
+                              i === viewerStoryIndex ? progressAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0%', '100%'],
+                              }) : '0%',
+                          },
+                        ]}
+                      />
+                    )}
                   </View>
                 ))}
               </View>
 
-              {/* User info header */}
+              {/* User info */}
               <View style={[styles.viewerHeader, { top: Platform.OS === 'web' ? 30 : 60 }]}>
                 <View style={styles.viewerUserInfo}>
                   {currentViewerGroup.user?.avatar_url ? (
@@ -577,13 +459,6 @@ export default function StoriesBar() {
                   <X size={24} color="#FFF" />
                 </TouchableOpacity>
               </View>
-
-              {/* Story text */}
-              {currentViewerStory.text && (
-                <View style={styles.viewerTextContainer}>
-                  <Text style={styles.viewerText}>{currentViewerStory.text}</Text>
-                </View>
-              )}
             </TouchableOpacity>
           )}
         </View>
@@ -625,12 +500,12 @@ function createStyles(theme) {
       borderColor: theme.colors.border,
       borderStyle: 'dashed',
     },
-    storyAvatar: {
+    storyThumb: {
       width: STORY_SIZE,
       height: STORY_SIZE,
       borderRadius: STORY_SIZE / 2,
     },
-    storyEmojiContainer: {
+    storyThumbPlaceholder: {
       width: STORY_SIZE,
       height: STORY_SIZE,
       borderRadius: STORY_SIZE / 2,
@@ -640,139 +515,11 @@ function createStyles(theme) {
     storyEmoji: {
       fontSize: 28,
     },
-    addBadge: {
-      position: 'absolute',
-      bottom: 0,
-      right: 0,
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: theme.colors.background,
-    },
     storyUsername: {
       fontSize: 11,
       marginTop: 4,
       textAlign: 'center',
       fontWeight: '500',
-    },
-
-    // Create modal
-    createContainer: {
-      flex: 1,
-    },
-    createHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
-      zIndex: 10,
-    },
-    createCloseBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    createTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: '#FFF',
-    },
-    createPostBtn: {
-      paddingHorizontal: 20,
-      paddingVertical: 8,
-      borderRadius: 20,
-    },
-    createPostBtnText: {
-      fontSize: 15,
-      fontWeight: '700',
-    },
-    modeSelection: {
-      flex: 1,
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 20,
-      paddingHorizontal: 20,
-    },
-    modeBtn: {
-      width: 150,
-      height: 180,
-      borderRadius: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      gap: 8,
-    },
-    modeBtnText: {
-      fontSize: 17,
-      fontWeight: '700',
-    },
-    modeBtnDesc: {
-      fontSize: 12,
-    },
-    photoPreview: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    photoPreviewImage: {
-      width: SCREEN_WIDTH,
-      flex: 1,
-    },
-    photoTextOverlay: {
-      position: 'absolute',
-      bottom: 80,
-      left: 20,
-      right: 20,
-    },
-    photoTextInput: {
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      color: '#FFF',
-      fontSize: 16,
-      padding: 12,
-      borderRadius: 12,
-      textAlign: 'center',
-      maxHeight: 100,
-    },
-    textEditor: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 30,
-    },
-    textStoryInput: {
-      color: '#FFF',
-      fontSize: 28,
-      fontWeight: '700',
-      textAlign: 'center',
-      maxHeight: 300,
-      width: '100%',
-    },
-    colorPicker: {
-      position: 'absolute',
-      bottom: 40,
-      left: 0,
-      right: 0,
-      paddingHorizontal: 16,
-    },
-    colorOption: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      marginHorizontal: 4,
-      borderWidth: 2,
-      borderColor: 'transparent',
-    },
-    colorOptionSelected: {
-      borderColor: '#FFF',
-      transform: [{ scale: 1.15 }],
     },
 
     // Viewer
@@ -853,22 +600,6 @@ function createStyles(theme) {
       backgroundColor: 'rgba(0,0,0,0.3)',
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    viewerTextContainer: {
-      position: 'absolute',
-      bottom: 80,
-      left: 20,
-      right: 20,
-      alignItems: 'center',
-    },
-    viewerText: {
-      color: '#FFF',
-      fontSize: 22,
-      fontWeight: '700',
-      textAlign: 'center',
-      textShadowColor: 'rgba(0,0,0,0.8)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 4,
     },
   });
 }
