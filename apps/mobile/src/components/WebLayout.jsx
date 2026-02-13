@@ -746,6 +746,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 16,
+    pointerEvents: 'box-none',
   },
   storiesDockInner: {
     backgroundColor: 'rgba(20,20,30,0.85)',
@@ -761,6 +762,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 20,
     maxHeight: '80%',
+    pointerEvents: 'auto',
   },
   storiesCollapseBtn: {
     width: 36,
