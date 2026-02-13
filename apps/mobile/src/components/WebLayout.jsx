@@ -424,19 +424,18 @@ export default function WebLayout({ children }) {
         {children}
       </View>
 
-      {/* Stories Right Sidebar */}
+      {/* Stories Right Dock */}
       {!storiesCollapsed && (
-        <View style={[styles.storiesSidebar, { borderLeftColor: theme.colors.border }]}>
-          <View style={styles.storiesSidebarInner}>
-            <Text style={[styles.storiesSidebarTitle, { color: theme.colors.textSecondary }]}>STORIES</Text>
-            <StoriesBar vertical />
+        <View style={styles.storiesDock}>
+          <View style={styles.storiesDockInner}>
+            <StoriesBar vertical reversed />
+            <TouchableOpacity
+              onPress={() => setStoriesCollapsed(true)}
+              style={styles.storiesCollapseBtn}
+            >
+              <ChevronRight size={12} color="rgba(255,255,255,0.4)" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={() => setStoriesCollapsed(true)}
-            style={styles.storiesCollapseBtn}
-          >
-            <ChevronRight size={14} color="rgba(255,255,255,0.5)" />
-          </TouchableOpacity>
         </View>
       )}
 
@@ -736,31 +735,32 @@ const styles = StyleSheet.create({
     cursor: 'pointer',
   },
 
-  // ─── Stories Right Sidebar ───
-  storiesSidebar: {
+  // ─── Stories Right Dock (mirrors left dock) ───
+  storiesDock: {
     position: 'fixed',
     top: 0,
     right: 0,
     bottom: 0,
     width: STORIES_WIDTH,
     zIndex: 100,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 12,
-    borderLeftWidth: 1,
-    backgroundColor: 'rgba(10,10,18,0.6)',
+    paddingVertical: 16,
   },
-  storiesSidebarInner: {
-    flex: 1,
-    width: '100%',
+  storiesDockInner: {
+    backgroundColor: 'rgba(20,20,30,0.85)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
-  },
-  storiesSidebarTitle: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    marginBottom: 6,
-    marginTop: 4,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    maxHeight: '80%',
   },
   storiesCollapseBtn: {
     width: 36,
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginTop: 4,
     cursor: 'pointer',
   },
   storiesHandle: {
@@ -801,19 +801,24 @@ const styles = StyleSheet.create({
   // ─── Mobile Bottom Bar ───
   mobileBottomBar: {
     position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 12,
+    left: 20,
+    right: 20,
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: 'rgba(15,15,25,0.95)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(20,20,30,0.85)',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
     zIndex: 9999,
     backdropFilter: 'blur(20px)',
-    paddingBottom: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    paddingBottom: 0,
   },
   mobileBottomItem: {
     alignItems: 'center',

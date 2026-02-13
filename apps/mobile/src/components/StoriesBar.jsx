@@ -28,7 +28,7 @@ const STORY_SIZE = 68;
 const STORY_RING_SIZE = 74;
 const IMAGE_DURATION = 5000;
 
-export default function StoriesBar({ vertical = false }) {
+export default function StoriesBar({ vertical = false, reversed = false }) {
   const { theme, isLight } = useTheme();
   const user = useAuthStore(state => state.auth);
   const { city_id, zone_id, feedView } = useLocationStore();
@@ -318,6 +318,67 @@ export default function StoriesBar({ vertical = false }) {
   // Get the latest story thumbnail for a group (for the circle icon)
   const getGroupThumb = (group) => group.stories[0]?.image_url;
 
+  const THUMB = vertical ? 44 : STORY_SIZE;
+  const RING = vertical ? 50 : STORY_RING_SIZE;
+
+  const renderStoryCircle = (group, isUser = false) => {
+    const actualIdx = groupedStories.indexOf(group);
+    const viewed = !isUser && isGroupViewed(group);
+    const thumb = getGroupThumb(group);
+    const hasStory = isUser && userHasStory;
+
+    return (
+      <TouchableOpacity
+        key={isUser ? 'user-story' : group.userId}
+        style={vertical ? styles.storyItemVertical : styles.storyItem}
+        onPress={() => {
+          if (isUser) {
+            if (hasStory) {
+              const idx = groupedStories.findIndex(g => g.userId === user?.id);
+              if (idx >= 0) openViewer(idx);
+            } else {
+              pickAndUploadMedia();
+            }
+          } else {
+            openViewer(actualIdx);
+          }
+        }}
+        onLongPress={isUser ? () => pickAndUploadMedia() : undefined}
+        activeOpacity={0.7}
+      >
+        <View style={[{ width: RING, height: RING, borderRadius: RING / 2, justifyContent: 'center', alignItems: 'center', borderWidth: 2.5, padding: 2 },
+          isUser ? (hasStory ? styles.storyRingActive : styles.storyRingAdd) : (viewed ? styles.storyRingViewed : styles.storyRingActive)
+        ]}>
+          {isUser && !hasStory ? (
+            uploading ? (
+              <View style={[{ width: THUMB, height: THUMB, borderRadius: THUMB / 2, justifyContent: 'center', alignItems: 'center' }, { backgroundColor: theme.colors.surface }]}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              </View>
+            ) : (
+              <View style={[{ width: THUMB, height: THUMB, borderRadius: THUMB / 2, justifyContent: 'center', alignItems: 'center' }, { backgroundColor: theme.colors.surface }]}>
+                <Plus size={vertical ? 18 : 28} color={theme.colors.textSecondary} />
+              </View>
+            )
+          ) : thumb ? (
+            <Image source={{ uri: thumb }} style={{ width: THUMB, height: THUMB, borderRadius: THUMB / 2 }} />
+          ) : (
+            <View style={[{ width: THUMB, height: THUMB, borderRadius: THUMB / 2, justifyContent: 'center', alignItems: 'center' }, { backgroundColor: theme.colors.surface }]}>
+              <Text style={{ fontSize: vertical ? 18 : 28 }}>{(isUser ? user?.emoji_icon : group.user?.emoji_icon) || '👤'}</Text>
+            </View>
+          )}
+        </View>
+        {!vertical && (
+          <Text style={[styles.storyUsername, { color: isUser ? theme.colors.text : (viewed ? theme.colors.textSecondary : theme.colors.text) }]} numberOfLines={1}>
+            {isUser ? (uploading ? 'Posting...' : hasStory ? 'Your story' : 'Add story') : (group.user?.username || 'User')}
+          </Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const friendGroups = groupedStories.filter(g => g.userId !== user?.id);
+  const displayFriends = vertical ? friendGroups.slice(0, 6) : friendGroups;
+
   return (
     <View>
       <ScrollView
@@ -327,65 +388,17 @@ export default function StoriesBar({ vertical = false }) {
         contentContainerStyle={vertical ? styles.scrollContainerVertical : styles.scrollContainer}
         style={vertical ? styles.scrollViewVertical : styles.scrollView}
       >
-        {/* Add story button */}
-        <TouchableOpacity
-          style={styles.storyItem}
-          onPress={() => {
-            if (userHasStory) {
-              const idx = groupedStories.findIndex(g => g.userId === user?.id);
-              if (idx >= 0) openViewer(idx);
-            } else {
-              pickAndUploadMedia();
-            }
-          }}
-          onLongPress={() => pickAndUploadMedia()}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.storyRing, userHasStory ? styles.storyRingActive : styles.storyRingAdd]}>
-            {userHasStory ? (
-              <Image source={{ uri: getGroupThumb(groupedStories.find(g => g.userId === user?.id)) }} style={styles.storyThumb} />
-            ) : uploading ? (
-              <View style={[styles.storyThumbPlaceholder, { backgroundColor: theme.colors.surface }]}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              </View>
-            ) : (
-              <View style={[styles.storyThumbPlaceholder, { backgroundColor: theme.colors.surface }]}>
-                <Plus size={28} color={theme.colors.textSecondary} />
-              </View>
-            )}
-          </View>
-          <Text style={[styles.storyUsername, { color: theme.colors.text }]} numberOfLines={1}>
-            {uploading ? 'Posting...' : userHasStory ? 'Your story' : 'Add story'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Other users' stories */}
-        {groupedStories.filter(g => g.userId !== user?.id).map((group) => {
-          const actualIdx = groupedStories.indexOf(group);
-          const viewed = isGroupViewed(group);
-          const thumb = getGroupThumb(group);
-          return (
-            <TouchableOpacity
-              key={group.userId}
-              style={styles.storyItem}
-              onPress={() => openViewer(actualIdx)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.storyRing, viewed ? styles.storyRingViewed : styles.storyRingActive]}>
-                {thumb ? (
-                  <Image source={{ uri: thumb }} style={styles.storyThumb} />
-                ) : (
-                  <View style={[styles.storyThumbPlaceholder, { backgroundColor: theme.colors.surface }]}>
-                    <Text style={styles.storyEmoji}>{group.user?.emoji_icon || '👤'}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.storyUsername, { color: viewed ? theme.colors.textSecondary : theme.colors.text }]} numberOfLines={1}>
-                {group.user?.username || 'User'}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        {reversed ? (
+          <>
+            {displayFriends.map(group => renderStoryCircle(group, false))}
+            {renderStoryCircle(groupedStories.find(g => g.userId === user?.id) || { userId: user?.id, user, stories: [] }, true)}
+          </>
+        ) : (
+          <>
+            {renderStoryCircle(groupedStories.find(g => g.userId === user?.id) || { userId: user?.id, user, stories: [] }, true)}
+            {displayFriends.map(group => renderStoryCircle(group, false))}
+          </>
+        )}
       </ScrollView>
 
       {/* ─── STORY VIEWER ─────────────────────────────── */}
@@ -490,6 +503,9 @@ function createStyles(theme) {
     storyItem: {
       alignItems: 'center',
       width: 76,
+    },
+    storyItemVertical: {
+      alignItems: 'center',
     },
     storyRing: {
       width: STORY_RING_SIZE,
