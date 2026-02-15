@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   offlineBannerText: { fontSize: 12, fontWeight: '600' },
   scrollView: { flex: 1 },
-  form: { padding: 16 },
+  form: { padding: 16, paddingBottom: 120 },
   
   metadataContainer: { marginBottom: 16 },
   metadataRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },

@@ -70,6 +70,8 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerGroupIndex, setViewerGroupIndex] = useState(0);
   const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
+  const viewerGroupIndexRef = useRef(0);
+  const viewerStoryIndexRef = useRef(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const progressTimer = useRef(null);
   const videoRef = useRef(null);
@@ -261,8 +263,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         closeViewer();
       } else {
         // More stories remain — go to previous index or stay at 0
-        const newIdx = viewerStoryIndex > 0 ? viewerStoryIndex - 1 : 0;
+        const newIdx = viewerStoryIndexRef.current > 0 ? viewerStoryIndexRef.current - 1 : 0;
         setViewerStoryIndex(newIdx);
+        viewerStoryIndexRef.current = newIdx;
         startProgress(getStoryDuration(currentViewerStory));
       }
 
@@ -349,8 +352,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       if (storyCount <= 1) {
         closeViewer();
       } else {
-        const newIdx = viewerStoryIndex > 0 ? viewerStoryIndex - 1 : 0;
+        const newIdx = viewerStoryIndexRef.current > 0 ? viewerStoryIndexRef.current - 1 : 0;
         setViewerStoryIndex(newIdx);
+        viewerStoryIndexRef.current = newIdx;
         startProgress(getStoryDuration(currentViewerStory));
       }
 
@@ -424,7 +428,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
   const openViewer = (groupIndex) => {
     setViewerGroupIndex(groupIndex);
+    viewerGroupIndexRef.current = groupIndex;
     setViewerStoryIndex(0);
+    viewerStoryIndexRef.current = 0;
     setViewerVisible(true);
     setShowViewersList(false);
     setBlockConfirmUser(null);
@@ -468,21 +474,26 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   };
 
   const goNextStory = () => {
-    const currentGroup = groupedStories[viewerGroupIndex];
+    const gi = viewerGroupIndexRef.current;
+    const si = viewerStoryIndexRef.current;
+    const currentGroup = groupedStories[gi];
     if (!currentGroup) { closeViewer(); return; }
 
-    if (viewerStoryIndex < currentGroup.stories.length - 1) {
-      const nextIdx = viewerStoryIndex + 1;
+    if (si < currentGroup.stories.length - 1) {
+      const nextIdx = si + 1;
       setViewerStoryIndex(nextIdx);
+      viewerStoryIndexRef.current = nextIdx;
       markAsViewed(currentGroup.stories[nextIdx]?.id);
       const nextStory = currentGroup.stories[nextIdx];
       if (!isVideo(nextStory?.image_url)) startProgress(getStoryDuration(nextStory));
       else stopProgress();
       if (currentGroup.userId === user?.id) fetchStoryViewCount(nextStory?.id);
-    } else if (viewerGroupIndex < groupedStories.length - 1) {
-      const nextGroupIdx = viewerGroupIndex + 1;
+    } else if (gi < groupedStories.length - 1) {
+      const nextGroupIdx = gi + 1;
       setViewerGroupIndex(nextGroupIdx);
+      viewerGroupIndexRef.current = nextGroupIdx;
       setViewerStoryIndex(0);
+      viewerStoryIndexRef.current = 0;
       markAsViewed(groupedStories[nextGroupIdx]?.stories[0]?.id);
       const nextStory = groupedStories[nextGroupIdx]?.stories[0];
       if (!isVideo(nextStory?.image_url)) startProgress(getStoryDuration(nextStory));
@@ -494,18 +505,24 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   };
 
   const goPrevStory = () => {
-    if (viewerStoryIndex > 0) {
-      const prevIdx = viewerStoryIndex - 1;
+    const gi = viewerGroupIndexRef.current;
+    const si = viewerStoryIndexRef.current;
+    if (si > 0) {
+      const prevIdx = si - 1;
       setViewerStoryIndex(prevIdx);
-      const prevStory = groupedStories[viewerGroupIndex]?.stories[prevIdx];
+      viewerStoryIndexRef.current = prevIdx;
+      const prevStory = groupedStories[gi]?.stories[prevIdx];
       if (!isVideo(prevStory?.image_url)) startProgress(getStoryDuration(prevStory));
       else stopProgress();
-      if (groupedStories[viewerGroupIndex]?.userId === user?.id) fetchStoryViewCount(prevStory?.id);
-    } else if (viewerGroupIndex > 0) {
-      const prevGroupIdx = viewerGroupIndex - 1;
+      if (groupedStories[gi]?.userId === user?.id) fetchStoryViewCount(prevStory?.id);
+    } else if (gi > 0) {
+      const prevGroupIdx = gi - 1;
       const prevGroup = groupedStories[prevGroupIdx];
       setViewerGroupIndex(prevGroupIdx);
-      setViewerStoryIndex(prevGroup.stories.length - 1);
+      viewerGroupIndexRef.current = prevGroupIdx;
+      const lastIdx = prevGroup.stories.length - 1;
+      setViewerStoryIndex(lastIdx);
+      viewerStoryIndexRef.current = lastIdx;
       const prevStory = prevGroup.stories[prevGroup.stories.length - 1];
       if (!isVideo(prevStory?.image_url)) startProgress(getStoryDuration(prevStory));
       else stopProgress();
