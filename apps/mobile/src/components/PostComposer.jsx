@@ -13,7 +13,7 @@ import {
   Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera, MapPin, User, ChevronDown, Bold, Italic, Underline, Star, Briefcase } from "lucide-react-native";
+import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera, MapPin, User, ChevronDown, Bold, Italic, Underline, Star, Briefcase, Music } from "lucide-react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -26,6 +26,7 @@ import { crossAlert } from '../utils/alert';
 import { toast } from 'sonner-native';
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
+import SpotifyEmbed, { isValidSpotifyUrl } from "./SpotifyEmbed";
 import { RichTextEditor } from "../components/RichTextEditor";
 import HippieBackground from "../components/HippieBackground";
 import { offlineStorage, checkNetworkStatus } from "../utils/offline";
@@ -59,6 +60,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
   
   const [ctaType, setCtaType] = useState('none');
   const [ctaGroupId, setCtaGroupId] = useState(null);
+  const [spotifyUrl, setSpotifyUrl] = useState("");
   const [showGroupCreator, setShowGroupCreator] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupIcon, setNewGroupIcon] = useState("👥");
@@ -180,6 +182,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
         setTitle(data.title || "");
         setText(data.text || "");
         setIsAnonymous(data.is_anonymous);
+        if (data.spotify_url) setSpotifyUrl(data.spotify_url);
         if (data.image_urls) setMedia(data.image_urls.map(url => ({ uri: url, fromRemote: true, type: data.media_type || 'image' })));
       }
     } catch (error) { console.error(error); }
@@ -280,6 +283,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
         cta_type: ctaType,
         cta_group_id: ctaGroupId,
         posted_as_identity: isAnonymous ? 'personal' : postingAs,
+        spotify_url: isValidSpotifyUrl(spotifyUrl) ? spotifyUrl.trim() : null,
       };
 
       if (postId) await supabase.from('rposts').update(dbPostData).eq('id', postId);
@@ -844,6 +848,24 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
                 <TouchableOpacity onPress={() => setStep('cta')} style={styles.actionBtn}>
                   <MessageCircle size={20} color={ctaType !== 'none' ? theme.colors.primary : "rgba(255,255,255,0.6)"} />
                 </TouchableOpacity>
+              </View>
+
+              <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <Music size={16} color="#1DB954" style={{ marginRight: 8 }} />
+                  <TextInput
+                    value={spotifyUrl}
+                    onChangeText={setSpotifyUrl}
+                    placeholder="Paste Spotify link (optional)"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    style={{ flex: 1, color: '#FFF', fontSize: 13 }}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                {isValidSpotifyUrl(spotifyUrl) && (
+                  <SpotifyEmbed url={spotifyUrl} compact />
+                )}
               </View>
 
             {isInline && (

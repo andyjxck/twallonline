@@ -17,13 +17,14 @@ import { Image } from 'expo-image';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { Plus, X, Trash2, AlertTriangle, EyeOff, Type, MoreVertical, Eye, Ban } from 'lucide-react-native';
+import { Plus, X, Trash2, AlertTriangle, EyeOff, Type, MoreVertical, Eye, Ban, Music } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
 import { useTheme } from '../utils/ThemeContext';
 import { useAuthStore } from '../utils/auth';
 import { useLocationStore } from '../utils/locationStore';
 import { getBlockedUserIds, blockUser } from '../utils/blocking';
 import { toast } from 'sonner-native';
+import SpotifyEmbed, { isValidSpotifyUrl } from './SpotifyEmbed';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STORY_SIZE = 68;
@@ -47,6 +48,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   const [captionInput, setCaptionInput] = useState('');
   const [showCaptionInput, setShowCaptionInput] = useState(false);
   const [pendingAsset, setPendingAsset] = useState(null);
+  const [storySpotifyUrl, setStorySpotifyUrl] = useState('');
 
   // Mod/delete state
   const [showStoryActions, setShowStoryActions] = useState(false);
@@ -218,6 +220,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         user_id: user.id,
         image_url: publicUrl,
         caption: captionInput.trim() || null,
+        spotify_url: isValidSpotifyUrl(storySpotifyUrl) ? storySpotifyUrl.trim() : null,
         city_id: city_id !== 349 ? city_id : null,
         zone_id: zone_id || null,
       });
@@ -226,6 +229,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
       toast.success('Story posted');
       setCaptionInput('');
+      setStorySpotifyUrl('');
       setPendingAsset(null);
       fetchStories();
     } catch (err) {
@@ -749,6 +753,13 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                 </View>
               )}
 
+              {/* Spotify embed */}
+              {currentViewerStory.spotify_url && !storyIsBlurred && (
+                <View style={{ position: 'absolute', bottom: Platform.OS === 'web' ? 80 : 100, left: 16, right: 16, zIndex: 15 }}>
+                  <SpotifyEmbed url={currentViewerStory.spotify_url} compact />
+                </View>
+              )}
+
               {/* View count (own stories only) */}
               {isOwnStory && !showViewersList && !showStoryActions && !showDeleteConfirm && !showBlurModal && (
                 <TouchableOpacity 
@@ -975,7 +986,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
               {/* Top bar: close + post */}
               <View style={{ position: 'absolute', top: Platform.OS === 'web' ? 16 : 54, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 20 }}>
-                <TouchableOpacity onPress={() => { setShowCaptionInput(false); setPendingAsset(null); setCaptionInput(''); }} style={styles.viewerCloseBtn}>
+                <TouchableOpacity onPress={() => { setShowCaptionInput(false); setPendingAsset(null); setCaptionInput(''); setStorySpotifyUrl(''); }} style={styles.viewerCloseBtn}>
                   <X size={24} color="#FFF" />
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -1005,6 +1016,21 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                   />
                   <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 8 }}>{captionInput.length}/{MAX_CAPTION_LENGTH}</Text>
                 </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 }}>
+                  <Music size={16} color="#1DB954" style={{ marginRight: 8 }} />
+                  <TextInput
+                    value={storySpotifyUrl}
+                    onChangeText={setStorySpotifyUrl}
+                    placeholder="Paste Spotify link (optional)"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    style={{ flex: 1, color: '#FFF', fontSize: 13 }}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                {isValidSpotifyUrl(storySpotifyUrl) && (
+                  <SpotifyEmbed url={storySpotifyUrl} compact style={{ marginTop: 8 }} />
+                )}
               </View>
             </>
           )}

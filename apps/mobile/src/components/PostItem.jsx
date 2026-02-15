@@ -60,6 +60,7 @@ import { theme as defaultTheme } from "../utils/theme";
 import { blockUser, BLOCK_REASONS } from "../utils/blocking";
 import { reportPost, reportComment, REPORT_REASONS } from "../utils/reporting";
 import WebGifPicker from "./WebGifPicker";
+import SpotifyEmbed from "./SpotifyEmbed";
 
 const markdownToHtml = (text) => {
   if (!text) return '';
@@ -780,6 +781,12 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                 </>
               )}
             </TouchableOpacity>
+          )}
+
+          {!isCurrentlyBlurred && item.spotify_url && (
+            <View style={{ paddingHorizontal: 12 }}>
+              <SpotifyEmbed url={item.spotify_url} />
+            </View>
           )}
 
           {!isCurrentlyBlurred && (

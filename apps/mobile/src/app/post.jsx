@@ -17,7 +17,7 @@ import {
   import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
 import { toast } from 'sonner-native';
-  import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera } from "lucide-react-native";
+  import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera, Music } from "lucide-react-native";
 
 import { getStoredUser } from "../utils/user";
 import { getDeviceId } from "../utils/deviceId";
@@ -29,6 +29,7 @@ import { Image } from "expo-image";
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
 import BackgroundPattern from "@/components/BackgroundPattern";
+import SpotifyEmbed, { isValidSpotifyUrl } from "@/components/SpotifyEmbed";
 let RichTextEditor;
 if (Platform.OS !== 'web') {
   RichTextEditor = require('../components/RichTextEditor').RichTextEditor;
@@ -78,6 +79,7 @@ export default function PostScreen() {
   
   const [ctaType, setCtaType] = useState('none');
   const [ctaGroupId, setCtaGroupId] = useState(null);
+  const [spotifyUrl, setSpotifyUrl] = useState("");
   const [showGroupCreator, setShowGroupCreator] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
     const [newGroupIcon, setNewGroupIcon] = useState("👥");
@@ -158,6 +160,7 @@ export default function PostScreen() {
         setTitle(data.title || "");
         setText(data.text || "");
         setIsAnonymous(data.is_anonymous);
+        if (data.spotify_url) setSpotifyUrl(data.spotify_url);
         if (data.image_urls) setMedia(data.image_urls.map(url => ({ uri: url, fromRemote: true, type: data.media_type || 'image' })));
       }
     } catch (error) { console.error(error); }
@@ -263,6 +266,7 @@ export default function PostScreen() {
           city_id: city_id,
           cta_type: ctaType,
           cta_group_id: ctaGroupId,
+          spotify_url: isValidSpotifyUrl(spotifyUrl) ? spotifyUrl.trim() : null,
         };
 
         if (postId) await supabase.from('rposts').update(dbPostData).eq('id', postId);
@@ -728,6 +732,25 @@ export default function PostScreen() {
             )}
 
 
+          <View style={[styles.spotifySection, { borderColor: isHippie ? 'rgba(255,255,255,0.2)' : theme.colors.border, backgroundColor: isHippie ? 'rgba(255,255,255,0.05)' : theme.colors.surface }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Music size={18} color="#1DB954" />
+              <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: 14 }}>Spotify Track</Text>
+            </View>
+            <TextInput
+              placeholder="Paste Spotify link (optional)"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={spotifyUrl}
+              onChangeText={setSpotifyUrl}
+              style={[styles.spotifyInput, { color: theme.colors.text, borderColor: isHippie ? 'rgba(255,255,255,0.2)' : theme.colors.border }]}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {isValidSpotifyUrl(spotifyUrl) && (
+              <SpotifyEmbed url={spotifyUrl} compact />
+            )}
+          </View>
+
           <View style={styles.mediaSection}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaScroll}>
               {media.map((m, i) => (
@@ -817,6 +840,18 @@ const styles = StyleSheet.create({
     fontWeight: '800', 
     marginBottom: 16,
     letterSpacing: -0.5
+  },
+  spotifySection: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  spotifyInput: {
+    fontSize: 14,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   mediaSection: { marginTop: 20 },
   mediaScroll: { gap: 12 },
