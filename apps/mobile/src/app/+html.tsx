@@ -12,11 +12,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: `
-          html, body, #root { background-color: #000 !important; margin: 0; padding: 0; min-height: 100vh; min-height: 100dvh; }
-          body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+          html { background-color: #000 !important; }
+          body { background-color: #000 !important; margin: 0 !important; padding: 0 !important; min-height: 100vh; min-height: 100dvh; overflow: hidden; }
+          #root, #main, [data-expo-root] { background-color: #000 !important; min-height: 100vh; min-height: 100dvh; }
         ` }} />
       </head>
-      <body style={{ backgroundColor: '#000' }}>
+      <body>
         {/* Hidden Netlify form for bot detection */}
         <form name="android-beta" data-netlify="true" data-netlify-honeypot="bot-field" hidden>
           <input type="email" name="email" />
