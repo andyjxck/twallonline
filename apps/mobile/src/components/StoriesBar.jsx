@@ -10,12 +10,13 @@ import {
   Platform,
   StyleSheet,
   Animated,
+  TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { Plus, X } from 'lucide-react-native';
+import { Plus, X, Trash2, AlertTriangle, EyeOff, Type, MoreVertical } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
 import { useTheme } from '../utils/ThemeContext';
 import { useAuthStore } from '../utils/auth';
@@ -27,6 +28,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STORY_SIZE = 68;
 const STORY_RING_SIZE = 74;
 const IMAGE_DURATION = 5000;
+const MAX_CAPTION_LENGTH = 150;
 
 export default function StoriesBar({ vertical = false, reversed = false }) {
   const { theme, isLight } = useTheme();
@@ -38,6 +40,18 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   const [loading, setLoading] = useState(true);
   const [viewedStoryIds, setViewedStoryIds] = useState(new Set());
   const [uploading, setUploading] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+
+  // Caption state
+  const [captionInput, setCaptionInput] = useState('');
+  const [showCaptionInput, setShowCaptionInput] = useState(false);
+  const [pendingAsset, setPendingAsset] = useState(null);
+
+  // Mod/delete state
+  const [showStoryActions, setShowStoryActions] = useState(false);
+  const [showBlurModal, setShowBlurModal] = useState(false);
+  const [blurReasonInput, setBlurReasonInput] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Viewer state
   const [viewerVisible, setViewerVisible] = useState(false);
@@ -133,6 +147,15 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
     return () => { supabase.removeChannel(sub); };
   }, [fetchStories, fetchViewedStories]);
 
+  // Check if user is moderator
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('rusers').select('is_admin, is_moderator').eq('id', user.id).single()
+      .then(({ data }) => {
+        setIsModerator(!!(data?.is_admin || data?.is_moderator));
+      });
+  }, [user?.id]);
+
   const userHasStory = groupedStories.some(g => g.userId === user?.id);
 
   const isGroupViewed = (group) => {
@@ -156,8 +179,18 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
     if (result.canceled) return;
 
     const asset = result.assets[0];
+    // Show caption input before uploading
+    setPendingAsset(asset);
+    setCaptionInput('');
+    setShowCaptionInput(true);
+  };
+
+  const uploadStoryWithCaption = async () => {
+    if (!pendingAsset || !user?.id) return;
+    const asset = pendingAsset;
     const isVid = asset.type === 'video';
 
+    setShowCaptionInput(false);
     setUploading(true);
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -177,6 +210,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       const { error } = await supabase.from('rstories').insert({
         user_id: user.id,
         image_url: publicUrl,
+        caption: captionInput.trim() || null,
         city_id: city_id !== 349 ? city_id : null,
         zone_id: zone_id || null,
       });
@@ -184,12 +218,118 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       if (error) throw error;
 
       toast.success('Story posted');
+      setCaptionInput('');
+      setPendingAsset(null);
       fetchStories();
     } catch (err) {
       console.error('Error creating story:', err);
       toast.error(err?.message || 'Failed to post story');
     } finally {
       setUploading(false);
+    }
+  };
+
+  // ─── DELETE STORY ──────────────────────────────────────
+
+  const deleteStory = async (storyId) => {
+    try {
+      await supabase.from('rstories').delete().eq('id', storyId);
+      toast.success('Story deleted');
+      setShowDeleteConfirm(false);
+      setShowStoryActions(false);
+      // If this was the last story in the group, close viewer
+      const currentGroup = groupedStories[viewerGroupIndex];
+      if (currentGroup && currentGroup.stories.length <= 1) {
+        closeViewer();
+      } else {
+        goNextStory();
+      }
+      fetchStories();
+    } catch (err) {
+      console.error('Error deleting story:', err);
+      toast.error('Failed to delete story');
+    }
+  };
+
+  // ─── MOD: BLUR STORY ───────────────────────────────────
+
+  const blurStory = async (storyId, reason) => {
+    try {
+      await supabase.from('rstories').update({ is_blurred: true, blur_reason: reason }).eq('id', storyId);
+      // Log moderation action
+      try {
+        await supabase.from('rmoderation_logs').insert({
+          moderator_id: user?.id,
+          target_id: storyId,
+          target_type: 'story',
+          action: 'blur',
+          reason: reason || 'Story blurred by moderator',
+        });
+      } catch (logErr) {
+        console.warn('Failed to log mod action:', logErr);
+      }
+      toast.success('Story blurred');
+      setShowBlurModal(false);
+      setBlurReasonInput('');
+      setShowStoryActions(false);
+      fetchStories();
+    } catch (err) {
+      console.error('Error blurring story:', err);
+      toast.error('Failed to blur story');
+    }
+  };
+
+  const unblurStory = async (storyId) => {
+    try {
+      await supabase.from('rstories').update({ is_blurred: false, blur_reason: null }).eq('id', storyId);
+      try {
+        await supabase.from('rmoderation_logs').insert({
+          moderator_id: user?.id,
+          target_id: storyId,
+          target_type: 'story',
+          action: 'unblur',
+          reason: 'Blur removed by moderator',
+        });
+      } catch (logErr) {
+        console.warn('Failed to log mod action:', logErr);
+      }
+      toast.success('Blur removed');
+      setShowStoryActions(false);
+      fetchStories();
+    } catch (err) {
+      console.error('Error unblurring story:', err);
+      toast.error('Failed to remove blur');
+    }
+  };
+
+  const modDeleteStory = async (storyId) => {
+    try {
+      // Log before deleting
+      try {
+        await supabase.from('rmoderation_logs').insert({
+          moderator_id: user?.id,
+          target_id: storyId,
+          target_type: 'story',
+          action: 'delete',
+          reason: 'Story deleted by moderator',
+        });
+      } catch (logErr) {
+        console.warn('Failed to log mod action:', logErr);
+      }
+      await supabase.from('rstories').delete().eq('id', storyId);
+      toast.success('Story deleted by mod');
+      setShowDeleteConfirm(false);
+      setShowStoryActions(false);
+      const currentGroup = groupedStories[viewerGroupIndex];
+      if (currentGroup && currentGroup.stories.length <= 1) {
+        closeViewer();
+      } else {
+        goNextStory();
+      }
+      fetchStories();
+    } catch (err) {
+      console.error('Error deleting story:', err);
+      toast.error('Failed to delete story');
     }
   };
 
@@ -207,6 +347,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
   const closeViewer = () => {
     setViewerVisible(false);
+    setShowStoryActions(false);
+    setShowDeleteConfirm(false);
+    setShowBlurModal(false);
     stopProgress();
   };
 
@@ -310,6 +453,8 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   const currentViewerGroup = groupedStories[viewerGroupIndex];
   const currentViewerStory = currentViewerGroup?.stories[viewerStoryIndex];
   const currentIsVideo = isVideo(currentViewerStory?.image_url);
+  const isOwnStory = currentViewerGroup?.userId === user?.id;
+  const storyIsBlurred = currentViewerStory?.is_blurred;
 
   // ─── RENDER ─────────────────────────────────────────────
 
@@ -432,6 +577,25 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                 />
               )}
 
+              {/* Blur overlay */}
+              {storyIsBlurred && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', zIndex: 5 }]}>
+                  <AlertTriangle size={40} color="#F59E0B" />
+                  <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 12 }}>Content Warning</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 40 }}>
+                    {currentViewerStory.blur_reason || 'This story has been flagged by a moderator.'}
+                  </Text>
+                  {isModerator && (
+                    <TouchableOpacity 
+                      onPress={() => unblurStory(currentViewerStory.id)} 
+                      style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8 }}
+                    >
+                      <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>Remove Blur (Mod)</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               {/* Dim overlay */}
               <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
 
@@ -459,7 +623,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                 ))}
               </View>
 
-              {/* User info */}
+              {/* User info + actions */}
               <View style={[styles.viewerHeader, { top: Platform.OS === 'web' ? 30 : 60 }]}>
                 <View style={styles.viewerUserInfo}>
                   {currentViewerGroup.user?.avatar_url ? (
@@ -470,13 +634,173 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                   <Text style={styles.viewerUsername}>{currentViewerGroup.user?.username || 'User'}</Text>
                   <Text style={styles.viewerTime}>{getTimeAgo(currentViewerStory.created_at)}</Text>
                 </View>
-                <TouchableOpacity onPress={closeViewer} style={styles.viewerCloseBtn}>
-                  <X size={24} color="#FFF" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {(isOwnStory || isModerator) && (
+                    <TouchableOpacity onPress={() => { stopProgress(); setShowStoryActions(true); }} style={styles.viewerCloseBtn}>
+                      <MoreVertical size={20} color="#FFF" />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={closeViewer} style={styles.viewerCloseBtn}>
+                    <X size={24} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
               </View>
+
+              {/* Caption */}
+              {currentViewerStory.caption && !storyIsBlurred && (
+                <View style={styles.captionContainer}>
+                  <Text style={styles.captionText}>{currentViewerStory.caption}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           )}
         </View>
+      </Modal>
+
+      {/* ─── STORY ACTIONS MODAL ─────────────────────── */}
+      <Modal visible={showStoryActions} transparent animationType="fade">
+        <TouchableOpacity activeOpacity={1} onPress={() => setShowStoryActions(false)} style={styles.actionOverlay}>
+          <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface }]}>
+            {isOwnStory && (
+              <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
+                <Trash2 size={20} color={theme.colors.error} />
+                <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story</Text>
+              </TouchableOpacity>
+            )}
+            {isModerator && !isOwnStory && (
+              <>
+                {!storyIsBlurred ? (
+                  <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowBlurModal(true); }}>
+                    <EyeOff size={20} color="#F59E0B" />
+                    <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>Blur Story</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
+                    <EyeOff size={20} color="#10B981" />
+                    <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
+                  <Trash2 size={20} color={theme.colors.error} />
+                  <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story (Mod)</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            {isModerator && isOwnStory && (
+              <>
+                {!storyIsBlurred ? (
+                  <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowBlurModal(true); }}>
+                    <EyeOff size={20} color="#F59E0B" />
+                    <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>Blur Story</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
+                    <EyeOff size={20} color="#10B981" />
+                    <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+            <TouchableOpacity style={[styles.actionItem, { borderTopWidth: 1, borderTopColor: theme.colors.border }]} onPress={() => setShowStoryActions(false)}>
+              <Text style={[styles.actionItemText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── DELETE CONFIRM MODAL ────────────────────── */}
+      <Modal visible={showDeleteConfirm} transparent animationType="fade">
+        <TouchableOpacity activeOpacity={1} onPress={() => setShowDeleteConfirm(false)} style={styles.actionOverlay}>
+          <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
+            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Delete Story?</Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 14, marginBottom: 20 }}>This can't be undone.</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity 
+                onPress={() => setShowDeleteConfirm(false)} 
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => isOwnStory ? deleteStory(currentViewerStory?.id) : modDeleteStory(currentViewerStory?.id)} 
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.error, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── CAPTION INPUT MODAL ────────────────────── */}
+      <Modal visible={showCaptionInput} transparent animationType="slide">
+        <TouchableOpacity activeOpacity={1} onPress={() => { setShowCaptionInput(false); setPendingAsset(null); }} style={styles.actionOverlay}>
+          <TouchableOpacity activeOpacity={1} style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
+            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>Add a Caption</Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 12 }}>Optional — you can skip this.</Text>
+            {pendingAsset && (
+              <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                <Image source={{ uri: pendingAsset.uri }} style={{ width: 120, height: 120, borderRadius: 12 }} contentFit="cover" />
+              </View>
+            )}
+            <TextInput
+              value={captionInput}
+              onChangeText={(t) => setCaptionInput(t.slice(0, MAX_CAPTION_LENGTH))}
+              placeholder="Write a caption..."
+              placeholderTextColor={theme.colors.textSecondary}
+              style={{ backgroundColor: theme.colors.background, color: theme.colors.text, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 4, borderWidth: 1, borderColor: theme.colors.border }}
+              multiline
+              maxLength={MAX_CAPTION_LENGTH}
+            />
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginBottom: 14, textAlign: 'right' }}>{captionInput.length}/{MAX_CAPTION_LENGTH}</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity 
+                onPress={() => { setCaptionInput(''); uploadStoryWithCaption(); }} 
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={uploadStoryWithCaption} 
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.primary, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>Post Story</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── BLUR REASON MODAL ───────────────────────── */}
+      <Modal visible={showBlurModal} transparent animationType="fade">
+        <TouchableOpacity activeOpacity={1} onPress={() => setShowBlurModal(false)} style={styles.actionOverlay}>
+          <TouchableOpacity activeOpacity={1} style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
+            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Blur Story</Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 12 }}>Users will see a warning with your reason before viewing.</Text>
+            <TextInput
+              value={blurReasonInput}
+              onChangeText={setBlurReasonInput}
+              placeholder="Reason for blur (shown to users)..."
+              placeholderTextColor={theme.colors.textSecondary}
+              style={{ backgroundColor: theme.colors.background, color: theme.colors.text, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.border }}
+              multiline
+            />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity 
+                onPress={() => { setShowBlurModal(false); setBlurReasonInput(''); }} 
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => blurStory(currentViewerStory?.id, blurReasonInput.trim())} 
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#F59E0B', alignItems: 'center' }}
+              >
+                <Text style={{ color: '#000', fontWeight: '600' }}>Blur</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -627,6 +951,53 @@ function createStyles(theme) {
       backgroundColor: 'rgba(0,0,0,0.3)',
       justifyContent: 'center',
       alignItems: 'center',
+    },
+
+    // Caption
+    captionContainer: {
+      position: 'absolute',
+      bottom: Platform.OS === 'web' ? 30 : 60,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 16,
+      zIndex: 10,
+    },
+    captionText: {
+      color: '#FFF',
+      fontSize: 15,
+      fontWeight: '500',
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 4,
+      textAlign: 'center',
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      overflow: 'hidden',
+    },
+
+    // Action modals
+    actionOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    actionSheet: {
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      paddingBottom: Platform.OS === 'web' ? 20 : 34,
+    },
+    actionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+    },
+    actionItemText: {
+      fontSize: 15,
+      fontWeight: '600',
     },
   });
 }

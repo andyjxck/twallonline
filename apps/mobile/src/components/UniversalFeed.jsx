@@ -469,59 +469,8 @@ if (isOnline) syncPendingPosts();
               <Bell color={theme.colors.text} size={24} />
               {unreadCount > 0 && <View style={[styles.badge, { backgroundColor: theme.colors.error }]} />}
             </TouchableOpacity>
-            {Platform.OS !== 'web' && (
-              <TouchableOpacity onPress={() => setShowMenu(!showMenu)} style={styles.headerIcon}>
-                <Menu color={theme.colors.text} size={24} />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
-  
-          <AnimatePresence>
-            {showMenu && (
-              <View style={styles.dropdownWrapper} pointerEvents="box-none">
-                {Platform.OS !== 'web' && (
-                  <TouchableOpacity 
-                    activeOpacity={1} 
-                    style={styles.dropdownOverlay} 
-                    onPress={() => setShowMenu(false)} 
-                  />
-                )}
-                <MotiView
-                  from={{ translateY: -20, opacity: 0, scale: 0.95 }}
-                  animate={{ translateY: 0, opacity: 1, scale: 1 }}
-                  exit={{ translateY: -20, opacity: 0, scale: 0.95 }}
-                  transition={{ type: 'timing', duration: 200 }}
-                  style={[
-                    styles.menu, 
-                      { 
-                        top: insets.top + 60,
-                        right: 20,
-                        backgroundColor: isHippie ? '#1a1a1a' : (Platform.OS === 'web' ? theme.colors.surface : theme.colors.surface + 'CC'), 
-                        borderColor: theme.colors.border, 
-                        overflow: 'hidden',
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 10,
-                        elevation: 5,
-                      }
-                  ]}
-                >
-                  <BlurView intensity={80} tint={isHippie || theme.dark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-                  <View style={{ padding: 10 }}>
-                    <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => useChatStore.getState().open(), 100); }} style={styles.menuItem}><MessageCircle size={20} color={theme.colors.text} /><Text style={styles.menuText}>Chat</Text></TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/profile"), 100); }} style={styles.menuItem}><User size={20} color={theme.colors.text} /><Text style={styles.menuText}>Profile</Text></TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/talent"), 100); }} style={styles.menuItem}><Star size={20} color={theme.colors.text} /><Text style={styles.menuText}>Local Talent</Text></TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/businesses"), 100); }} style={styles.menuItem}><Briefcase size={20} color={theme.colors.text} /><Text style={styles.menuText}>Local Business</Text></TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/polls"), 100); }} style={styles.menuItem}><Vote size={20} color={theme.colors.text} /><Text style={styles.menuText}>Polls & Features</Text></TouchableOpacity>
-                    {isModerator && <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/admin-page-gYI"), 100); }} style={styles.menuItem}><Shield size={20} color={theme.colors.error} /><Text style={styles.menuText}>Admin</Text></TouchableOpacity>}
-                    <TouchableOpacity onPress={() => { setShowMenu(false); setTimeout(() => router.push("/help"), 100); }} style={styles.menuItem}><Sparkles size={20} color="#FBBF24" /><Text style={styles.menuText}>Towny</Text></TouchableOpacity>
-                  </View>
-                </MotiView>
-              </View>
-            )}
-          </AnimatePresence>
 
         {!isOnline && (
           <View style={styles.offlineBanner}>
@@ -597,7 +546,7 @@ if (isOnline) syncPendingPosts();
             )}
             keyExtractor={item => item.id.toString()}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
+            contentContainerStyle={{ paddingBottom: Platform.OS !== 'web' ? 160 : 100, paddingHorizontal: 16 }}
             ListEmptyComponent={loading ? <ActivityIndicator style={{ marginTop: 20 }} /> : <View style={styles.empty}><Text style={styles.emptyText}>No posts found</Text></View>}
           />
 
@@ -707,6 +656,63 @@ if (isOnline) syncPendingPosts();
 
         <NotificationPanel visible={showNotifications} onClose={() => setShowNotifications(false)} />
         <ShareManager ref={shareRef} />
+
+        {/* ─── FLOATING BOTTOM BAR (mobile native only) ─── */}
+        {Platform.OS !== 'web' && (
+          <>
+            <View style={[styles.mobileBottomBar, { bottom: insets.bottom + 12 }]}>
+              <TouchableOpacity onPress={() => useChatStore.getState().open()} style={styles.mobileBottomItem} activeOpacity={0.7}>
+                <MessageCircle size={22} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.mobileBottomLabel}>Chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push("/talent")} style={styles.mobileBottomItem} activeOpacity={0.7}>
+                <Star size={22} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.mobileBottomLabel}>Talent</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowMenu(prev => !prev)} style={styles.mobileBottomMenuBtn} activeOpacity={0.8}>
+                <Menu size={20} color="#FFF" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push("/businesses")} style={styles.mobileBottomItem} activeOpacity={0.7}>
+                <Briefcase size={22} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.mobileBottomLabel}>Business</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push("/profile")} style={styles.mobileBottomItem} activeOpacity={0.7}>
+                <User size={22} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.mobileBottomLabel}>Profile</Text>
+              </TouchableOpacity>
+            </View>
+
+            {showMenu && (
+              <>
+                <TouchableOpacity 
+                  activeOpacity={1} 
+                  onPress={() => setShowMenu(false)} 
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }} 
+                />
+                <View style={[styles.mobilePopup, { bottom: insets.bottom + 76 }]}>
+                  <TouchableOpacity onPress={() => { setShowMenu(false); router.push("/polls"); }} style={styles.mobilePopupItem}>
+                    <Vote size={18} color="rgba(255,255,255,0.7)" />
+                    <Text style={styles.mobilePopupText}>Polls & Features</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setShowMenu(false); router.push("/help"); }} style={styles.mobilePopupItem}>
+                    <Sparkles size={18} color="#FBBF24" />
+                    <Text style={styles.mobilePopupText}>Towny AI</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setShowMenu(false); router.push("/settings"); }} style={styles.mobilePopupItem}>
+                    <Settings size={18} color="rgba(255,255,255,0.7)" />
+                    <Text style={styles.mobilePopupText}>Settings</Text>
+                  </TouchableOpacity>
+                  {isModerator && (
+                    <TouchableOpacity onPress={() => { setShowMenu(false); router.push("/admin-page-gYI"); }} style={styles.mobilePopupItem}>
+                      <Shield size={18} color="#EF4444" />
+                      <Text style={styles.mobilePopupText}>Admin</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
+            )}
+          </>
+        )}
 
         <AnimatePresence>
           {showFilterSort && (
@@ -1055,6 +1061,77 @@ if (isOnline) syncPendingPosts();
     fontWeight: '600',
     fontSize: 14,
   },
+  // ─── Mobile Bottom Bar ───
+  mobileBottomBar: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(20,20,30,0.85)',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    zIndex: 9999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  mobileBottomItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 52,
+    height: 48,
+    gap: 2,
+  },
+  mobileBottomLabel: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600',
+  },
+  mobileBottomMenuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobilePopup: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(20,20,30,0.95)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    zIndex: 9999,
+    minWidth: 170,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  mobilePopupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  mobilePopupText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
   empty: { padding: 40, alignItems: 'center' },
   emptyText: { fontSize: 16, color: '#666' },
     modalOverlay: { 
