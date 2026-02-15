@@ -90,6 +90,9 @@ export default function UniversalFeed() {
   const [showMenu, setShowMenu] = useState(false);
   const [showFilterSort, setShowFilterSort] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
+  const [barExpanded, setBarExpanded] = useState(false);
+  const [userIdentity, setUserIdentity] = useState(null);
+  const [showIdentityMenu, setShowIdentityMenu] = useState(false);
   const user = useAuthStore(state => state.auth);
   const [showNotifications, setShowNotifications] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -234,8 +237,25 @@ return () => {
   const checkModerator = async () => {
     const user = await getStoredUser();
     if (user) {
-      const { data } = await supabase.from('rusers').select('is_admin, is_moderator').eq('id', user.id).single();
+      const { data } = await supabase.from('rusers').select('is_admin, is_moderator, active_identity, account_type').eq('id', user.id).single();
       setIsModerator(!!data?.is_admin || !!data?.is_moderator);
+      setUserIdentity(data?.active_identity || 'personal');
+    }
+  };
+
+  const handleSwitchIdentity = async (identity) => {
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase.from('rusers').update({ active_identity: identity }).eq('id', user.id);
+      if (error) throw error;
+      useAuthStore.getState().setAuth({ ...user, active_identity: identity });
+      setUserIdentity(identity);
+      setShowIdentityMenu(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      toast.success(`Switched to ${identity}`);
+    } catch (e) {
+      console.error('Failed to switch identity:', e);
+      toast.error('Failed to switch identity');
     }
   };
 

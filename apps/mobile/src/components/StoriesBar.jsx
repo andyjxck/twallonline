@@ -551,56 +551,51 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       <Modal visible={viewerVisible} animationType="fade" transparent={Platform.OS === 'web'}>
         <View style={[styles.viewerContainer, Platform.OS === 'web' && styles.viewerContainerWeb]}>
           {currentViewerStory && (
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handleViewerTap}
-              style={styles.viewerTouchable}
-            >
-              {/* Media */}
-              {currentIsVideo ? (
-                <Video
-                  ref={videoRef}
-                  source={{ uri: currentViewerStory.image_url }}
-                  style={StyleSheet.absoluteFill}
-                  resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay
-                  isLooping={false}
-                  onPlaybackStatusUpdate={(status) => {
-                    if (status.didJustFinish) handleVideoEnd();
-                  }}
-                />
-              ) : (
-                <Image
-                  source={{ uri: currentViewerStory.image_url }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="contain"
-                />
-              )}
+            <>
+              {/* Tap area for prev/next (behind everything) */}
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={handleViewerTap}
+                style={[StyleSheet.absoluteFill, { zIndex: 1 }]}
+              >
+                {/* Media */}
+                {currentIsVideo ? (
+                  <Video
+                    ref={videoRef}
+                    source={{ uri: currentViewerStory.image_url }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay
+                    isLooping={false}
+                    onPlaybackStatusUpdate={(status) => {
+                      if (status.didJustFinish) handleVideoEnd();
+                    }}
+                  />
+                ) : (
+                  <Image
+                    source={{ uri: currentViewerStory.image_url }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="contain"
+                  />
+                )}
 
-              {/* Blur overlay */}
-              {storyIsBlurred && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', zIndex: 5 }]}>
-                  <AlertTriangle size={40} color="#F59E0B" />
-                  <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 12 }}>Content Warning</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 40 }}>
-                    {currentViewerStory.blur_reason || 'This story has been flagged by a moderator.'}
-                  </Text>
-                  {isModerator && (
-                    <TouchableOpacity 
-                      onPress={() => unblurStory(currentViewerStory.id)} 
-                      style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8 }}
-                    >
-                      <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>Remove Blur (Mod)</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
+                {/* Blur overlay */}
+                {storyIsBlurred && (
+                  <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', zIndex: 5 }]}>
+                    <AlertTriangle size={40} color="#F59E0B" />
+                    <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 12 }}>Content Warning</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 40 }}>
+                      {currentViewerStory.blur_reason || 'This story has been flagged by a moderator.'}
+                    </Text>
+                  </View>
+                )}
 
-              {/* Dim overlay */}
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
+                {/* Dim overlay */}
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
+              </TouchableOpacity>
 
-              {/* Progress bars */}
-              <View style={[styles.progressContainer, { paddingTop: Platform.OS === 'web' ? 16 : 50 }]}>
+              {/* Progress bars (above tap area) */}
+              <View style={[styles.progressContainer, { paddingTop: Platform.OS === 'web' ? 16 : 50, zIndex: 10 }]} pointerEvents="none">
                 {currentViewerGroup.stories.map((s, i) => (
                   <View key={s.id} style={styles.progressBarBg}>
                     {currentIsVideo && i === viewerStoryIndex ? (
@@ -623,9 +618,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                 ))}
               </View>
 
-              {/* User info + actions */}
-              <View style={[styles.viewerHeader, { top: Platform.OS === 'web' ? 30 : 60 }]}>
-                <View style={styles.viewerUserInfo}>
+              {/* User info + action buttons (above tap area, receives touches) */}
+              <View style={[styles.viewerHeader, { top: Platform.OS === 'web' ? 30 : 60, zIndex: 20 }]}>
+                <View style={styles.viewerUserInfo} pointerEvents="none">
                   {currentViewerGroup.user?.avatar_url ? (
                     <Image source={{ uri: currentViewerGroup.user.avatar_url }} style={styles.viewerAvatar} />
                   ) : (
@@ -646,13 +641,25 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                 </View>
               </View>
 
-              {/* Caption */}
+              {/* Unblur button for mods (above tap area) */}
+              {storyIsBlurred && isModerator && (
+                <View style={{ position: 'absolute', bottom: '40%', alignSelf: 'center', zIndex: 20 }}>
+                  <TouchableOpacity 
+                    onPress={() => unblurStory(currentViewerStory.id)} 
+                    style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8 }}
+                  >
+                    <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>Remove Blur (Mod)</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Caption (above tap area, no touch) */}
               {currentViewerStory.caption && !storyIsBlurred && (
-                <View style={styles.captionContainer}>
+                <View style={[styles.captionContainer, { zIndex: 10 }]} pointerEvents="none">
                   <Text style={styles.captionText}>{currentViewerStory.caption}</Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </>
           )}
         </View>
       </Modal>
