@@ -1194,7 +1194,9 @@ if (isOnline) syncPendingPosts();
   },
   mobileCollapsedBtn: {
     position: 'absolute',
-    right: 20,
+    alignSelf: 'center',
+    left: '50%',
+    marginLeft: -26,
     width: 52,
     height: 52,
     borderRadius: 26,

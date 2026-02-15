@@ -179,13 +179,12 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
     if (result.canceled) return;
 
     const asset = result.assets[0];
-    // Show caption input before uploading
     setPendingAsset(asset);
     setCaptionInput('');
     setShowCaptionInput(true);
   };
 
-  const uploadStoryWithCaption = async () => {
+  const postStory = async () => {
     if (!pendingAsset || !user?.id) return;
     const asset = pendingAsset;
     const isVid = asset.type === 'video';
@@ -739,43 +738,65 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         </TouchableOpacity>
       </Modal>
 
-      {/* ─── CAPTION INPUT MODAL ────────────────────── */}
-      <Modal visible={showCaptionInput} transparent animationType="slide">
-        <TouchableOpacity activeOpacity={1} onPress={() => { setShowCaptionInput(false); setPendingAsset(null); }} style={styles.actionOverlay}>
-          <TouchableOpacity activeOpacity={1} style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
-            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>Add a Caption</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 12 }}>Optional — you can skip this.</Text>
-            {pendingAsset && (
-              <View style={{ alignItems: 'center', marginBottom: 12 }}>
-                <Image source={{ uri: pendingAsset.uri }} style={{ width: 120, height: 120, borderRadius: 12 }} contentFit="cover" />
+      {/* ─── STORY PREVIEW + CAPTION OVERLAY ────────── */}
+      <Modal visible={showCaptionInput} animationType="fade" transparent={Platform.OS === 'web'}>
+        <View style={[styles.viewerContainer, Platform.OS === 'web' && styles.viewerContainerWeb]}>
+          {pendingAsset && (
+            <>
+              {/* Full-screen media preview */}
+              {pendingAsset.type === 'video' ? (
+                <Video
+                  source={{ uri: pendingAsset.uri }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay
+                  isLooping
+                />
+              ) : (
+                <Image
+                  source={{ uri: pendingAsset.uri }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="contain"
+                />
+              )}
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.2)' }]} />
+
+              {/* Top bar: close + post */}
+              <View style={{ position: 'absolute', top: Platform.OS === 'web' ? 16 : 54, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 20 }}>
+                <TouchableOpacity onPress={() => { setShowCaptionInput(false); setPendingAsset(null); setCaptionInput(''); }} style={styles.viewerCloseBtn}>
+                  <X size={24} color="#FFF" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={postStory} 
+                  style={{ backgroundColor: theme.colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 }}
+                >
+                  <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>Post</Text>
+                </TouchableOpacity>
               </View>
-            )}
-            <TextInput
-              value={captionInput}
-              onChangeText={(t) => setCaptionInput(t.slice(0, MAX_CAPTION_LENGTH))}
-              placeholder="Write a caption..."
-              placeholderTextColor={theme.colors.textSecondary}
-              style={{ backgroundColor: theme.colors.background, color: theme.colors.text, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 4, borderWidth: 1, borderColor: theme.colors.border }}
-              multiline
-              maxLength={MAX_CAPTION_LENGTH}
-            />
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginBottom: 14, textAlign: 'right' }}>{captionInput.length}/{MAX_CAPTION_LENGTH}</Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity 
-                onPress={() => { setCaptionInput(''); uploadStoryWithCaption(); }} 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Skip</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={uploadStoryWithCaption} 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.primary, alignItems: 'center' }}
-              >
-                <Text style={{ color: '#FFF', fontWeight: '600' }}>Post Story</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+
+              {/* Caption input overlaid on media */}
+              <View style={{ position: 'absolute', bottom: Platform.OS === 'web' ? 30 : 50, left: 16, right: 16, zIndex: 20 }}>
+                {captionInput.length > 0 && (
+                  <View style={styles.captionPreviewBubble} pointerEvents="none">
+                    <Text style={styles.captionText}>{captionInput}</Text>
+                  </View>
+                )}
+                <View style={styles.captionInputRow}>
+                  <TextInput
+                    value={captionInput}
+                    onChangeText={(t) => setCaptionInput(t.slice(0, MAX_CAPTION_LENGTH))}
+                    placeholder="Add a caption..."
+                    placeholderTextColor="rgba(255,255,255,0.5)"
+                    style={styles.captionOverlayInput}
+                    multiline
+                    maxLength={MAX_CAPTION_LENGTH}
+                  />
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 8 }}>{captionInput.length}/{MAX_CAPTION_LENGTH}</Text>
+                </View>
+              </View>
+            </>
+          )}
+        </View>
       </Modal>
 
       {/* ─── BLUR REASON MODAL ───────────────────────── */}
@@ -960,7 +981,7 @@ function createStyles(theme) {
       alignItems: 'center',
     },
 
-    // Caption
+    // Caption display (viewer)
     captionContainer: {
       position: 'absolute',
       bottom: Platform.OS === 'web' ? 30 : 60,
@@ -982,6 +1003,33 @@ function createStyles(theme) {
       paddingHorizontal: 14,
       paddingVertical: 8,
       overflow: 'hidden',
+    },
+
+    // Caption creation (preview screen)
+    captionPreviewBubble: {
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      marginBottom: 10,
+      alignSelf: 'center',
+      maxWidth: '90%',
+    },
+    captionInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      borderRadius: 24,
+      paddingHorizontal: 16,
+      paddingVertical: Platform.OS === 'web' ? 10 : 8,
+    },
+    captionOverlayInput: {
+      flex: 1,
+      color: '#FFF',
+      fontSize: 15,
+      fontWeight: '500',
+      maxHeight: 80,
+      paddingVertical: 0,
     },
 
     // Action modals
