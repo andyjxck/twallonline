@@ -61,6 +61,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
   const [ctaType, setCtaType] = useState('none');
   const [ctaGroupId, setCtaGroupId] = useState(null);
   const [spotifyUrl, setSpotifyUrl] = useState("");
+  const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const [showGroupCreator, setShowGroupCreator] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupIcon, setNewGroupIcon] = useState("👥");
@@ -848,25 +849,35 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
                 <TouchableOpacity onPress={() => setStep('cta')} style={styles.actionBtn}>
                   <MessageCircle size={20} color={ctaType !== 'none' ? theme.colors.primary : "rgba(255,255,255,0.6)"} />
                 </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowSpotifyInput(!showSpotifyInput)} style={styles.actionBtn}>
+                  <Music size={20} color={spotifyUrl ? '#1DB954' : "rgba(255,255,255,0.6)"} />
+                </TouchableOpacity>
               </View>
 
-              <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                  <Music size={16} color="#1DB954" style={{ marginRight: 8 }} />
-                  <TextInput
-                    value={spotifyUrl}
-                    onChangeText={setSpotifyUrl}
-                    placeholder="Paste Spotify link (optional)"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
-                    style={{ flex: 1, color: '#FFF', fontSize: 13 }}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+              {showSpotifyInput && (
+                <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <Music size={16} color="#1DB954" style={{ marginRight: 8 }} />
+                    <TextInput
+                      value={spotifyUrl}
+                      onChangeText={setSpotifyUrl}
+                      placeholder="Paste Spotify link..."
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      style={{ flex: 1, color: '#FFF', fontSize: 13 }}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    {spotifyUrl.length > 0 && (
+                      <TouchableOpacity onPress={() => setSpotifyUrl('')} style={{ padding: 4 }}>
+                        <X size={14} color="rgba(255,255,255,0.5)" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {isValidSpotifyUrl(spotifyUrl) && (
+                    <SpotifyEmbed url={spotifyUrl} compact />
+                  )}
                 </View>
-                {isValidSpotifyUrl(spotifyUrl) && (
-                  <SpotifyEmbed url={spotifyUrl} compact />
-                )}
-              </View>
+              )}
 
             {isInline && (
               <TouchableOpacity 
