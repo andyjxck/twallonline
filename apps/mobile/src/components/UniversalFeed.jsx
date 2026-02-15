@@ -461,7 +461,7 @@ if (isOnline) syncPendingPosts();
         {/* Tiled background pattern */}
         <Image
           source={require('../../assets/images/gback.png')}
-          style={[StyleSheet.absoluteFill, { opacity: 0.06 }]}
+          style={[StyleSheet.absoluteFill, { opacity: 0.075 }]}
           contentFit="repeat"
           pointerEvents="none"
         />
