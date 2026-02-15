@@ -232,18 +232,25 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
   const deleteStory = async (storyId) => {
     try {
+      const currentGroup = groupedStories[viewerGroupIndex];
+      const storyCount = currentGroup?.stories?.length || 0;
+
       await supabase.from('rstories').delete().eq('id', storyId);
-      toast.success('Story deleted');
       setShowDeleteConfirm(false);
       setShowStoryActions(false);
-      // If this was the last story in the group, close viewer
-      const currentGroup = groupedStories[viewerGroupIndex];
-      if (currentGroup && currentGroup.stories.length <= 1) {
+
+      if (storyCount <= 1) {
+        // Last story in group — close viewer, then refresh
         closeViewer();
       } else {
-        goNextStory();
+        // More stories remain — go to previous index or stay at 0
+        const newIdx = viewerStoryIndex > 0 ? viewerStoryIndex - 1 : 0;
+        setViewerStoryIndex(newIdx);
+        startProgress(IMAGE_DURATION);
       }
-      fetchStories();
+
+      await fetchStories();
+      toast.success('Story deleted');
     } catch (err) {
       console.error('Error deleting story:', err);
       toast.error('Failed to delete story');
@@ -303,6 +310,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
   const modDeleteStory = async (storyId) => {
     try {
+      const currentGroup = groupedStories[viewerGroupIndex];
+      const storyCount = currentGroup?.stories?.length || 0;
+
       // Log before deleting
       try {
         await supabase.from('rmoderation_logs').insert({
@@ -316,16 +326,19 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         console.warn('Failed to log mod action:', logErr);
       }
       await supabase.from('rstories').delete().eq('id', storyId);
-      toast.success('Story deleted by mod');
       setShowDeleteConfirm(false);
       setShowStoryActions(false);
-      const currentGroup = groupedStories[viewerGroupIndex];
-      if (currentGroup && currentGroup.stories.length <= 1) {
+
+      if (storyCount <= 1) {
         closeViewer();
       } else {
-        goNextStory();
+        const newIdx = viewerStoryIndex > 0 ? viewerStoryIndex - 1 : 0;
+        setViewerStoryIndex(newIdx);
+        startProgress(IMAGE_DURATION);
       }
-      fetchStories();
+
+      await fetchStories();
+      toast.success('Story deleted by mod');
     } catch (err) {
       console.error('Error deleting story:', err);
       toast.error('Failed to delete story');
@@ -657,84 +670,119 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                   <Text style={styles.captionText}>{currentViewerStory.caption}</Text>
                 </View>
               )}
+
+              {/* ─── INLINE ACTION SHEET (inside viewer modal) ─── */}
+              {showStoryActions && (
+                <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}>
+                  <TouchableOpacity activeOpacity={1} onPress={() => { setShowStoryActions(false); startProgress(IMAGE_DURATION); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+                  <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface }]}>
+                    {isOwnStory && (
+                      <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
+                        <Trash2 size={20} color={theme.colors.error} />
+                        <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story</Text>
+                      </TouchableOpacity>
+                    )}
+                    {isModerator && !isOwnStory && (
+                      <>
+                        {!storyIsBlurred ? (
+                          <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowBlurModal(true); }}>
+                            <EyeOff size={20} color="#F59E0B" />
+                            <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>Blur Story</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
+                            <EyeOff size={20} color="#10B981" />
+                            <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
+                          <Trash2 size={20} color={theme.colors.error} />
+                          <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story (Mod)</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                    {isModerator && isOwnStory && (
+                      <>
+                        {!storyIsBlurred ? (
+                          <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowBlurModal(true); }}>
+                            <EyeOff size={20} color="#F59E0B" />
+                            <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>Blur Story</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
+                            <EyeOff size={20} color="#10B981" />
+                            <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                    <TouchableOpacity style={[styles.actionItem, { borderTopWidth: 1, borderTopColor: theme.colors.border }]} onPress={() => { setShowStoryActions(false); startProgress(IMAGE_DURATION); }}>
+                      <Text style={[styles.actionItemText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* ─── INLINE DELETE CONFIRM (inside viewer modal) ─── */}
+              {showDeleteConfirm && (
+                <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}>
+                  <TouchableOpacity activeOpacity={1} onPress={() => setShowDeleteConfirm(false)} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+                  <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
+                    <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Delete Story?</Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 14, marginBottom: 20 }}>This can't be undone.</Text>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <TouchableOpacity 
+                        onPress={() => setShowDeleteConfirm(false)} 
+                        style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
+                      >
+                        <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => isOwnStory ? deleteStory(currentViewerStory?.id) : modDeleteStory(currentViewerStory?.id)} 
+                        style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.error, alignItems: 'center' }}
+                      >
+                        <Text style={{ color: '#FFF', fontWeight: '600' }}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ─── INLINE BLUR REASON (inside viewer modal) ─── */}
+              {showBlurModal && (
+                <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}>
+                  <TouchableOpacity activeOpacity={1} onPress={() => setShowBlurModal(false)} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+                  <TouchableOpacity activeOpacity={1} style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
+                    <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Blur Story</Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 12 }}>Users will see a warning with your reason.</Text>
+                    <TextInput
+                      value={blurReasonInput}
+                      onChangeText={setBlurReasonInput}
+                      placeholder="Reason for blur..."
+                      placeholderTextColor={theme.colors.textSecondary}
+                      style={{ backgroundColor: theme.colors.background, color: theme.colors.text, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.border }}
+                      multiline
+                    />
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <TouchableOpacity 
+                        onPress={() => { setShowBlurModal(false); setBlurReasonInput(''); }} 
+                        style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
+                      >
+                        <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => blurStory(currentViewerStory?.id, blurReasonInput.trim())} 
+                        style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#F59E0B', alignItems: 'center' }}
+                      >
+                        <Text style={{ color: '#000', fontWeight: '600' }}>Blur</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           )}
         </View>
-      </Modal>
-
-      {/* ─── STORY ACTIONS MODAL ─────────────────────── */}
-      <Modal visible={showStoryActions} transparent animationType="fade">
-        <TouchableOpacity activeOpacity={1} onPress={() => setShowStoryActions(false)} style={styles.actionOverlay}>
-          <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface }]}>
-            {isOwnStory && (
-              <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
-                <Trash2 size={20} color={theme.colors.error} />
-                <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story</Text>
-              </TouchableOpacity>
-            )}
-            {isModerator && !isOwnStory && (
-              <>
-                {!storyIsBlurred ? (
-                  <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowBlurModal(true); }}>
-                    <EyeOff size={20} color="#F59E0B" />
-                    <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>Blur Story</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
-                    <EyeOff size={20} color="#10B981" />
-                    <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
-                  <Trash2 size={20} color={theme.colors.error} />
-                  <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story (Mod)</Text>
-                </TouchableOpacity>
-              </>
-            )}
-            {isModerator && isOwnStory && (
-              <>
-                {!storyIsBlurred ? (
-                  <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowBlurModal(true); }}>
-                    <EyeOff size={20} color="#F59E0B" />
-                    <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>Blur Story</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
-                    <EyeOff size={20} color="#10B981" />
-                    <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-            <TouchableOpacity style={[styles.actionItem, { borderTopWidth: 1, borderTopColor: theme.colors.border }]} onPress={() => setShowStoryActions(false)}>
-              <Text style={[styles.actionItemText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* ─── DELETE CONFIRM MODAL ────────────────────── */}
-      <Modal visible={showDeleteConfirm} transparent animationType="fade">
-        <TouchableOpacity activeOpacity={1} onPress={() => setShowDeleteConfirm(false)} style={styles.actionOverlay}>
-          <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
-            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Delete Story?</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 14, marginBottom: 20 }}>This can't be undone.</Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity 
-                onPress={() => setShowDeleteConfirm(false)} 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => isOwnStory ? deleteStory(currentViewerStory?.id) : modDeleteStory(currentViewerStory?.id)} 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.error, alignItems: 'center' }}
-              >
-                <Text style={{ color: '#FFF', fontWeight: '600' }}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
       </Modal>
 
       {/* ─── STORY PREVIEW + CAPTION OVERLAY ────────── */}
@@ -798,37 +846,6 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         </View>
       </Modal>
 
-      {/* ─── BLUR REASON MODAL ───────────────────────── */}
-      <Modal visible={showBlurModal} transparent animationType="fade">
-        <TouchableOpacity activeOpacity={1} onPress={() => setShowBlurModal(false)} style={styles.actionOverlay}>
-          <TouchableOpacity activeOpacity={1} style={[styles.actionSheet, { backgroundColor: theme.colors.surface, padding: 20 }]}>
-            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Blur Story</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 12 }}>Users will see a warning with your reason before viewing.</Text>
-            <TextInput
-              value={blurReasonInput}
-              onChangeText={setBlurReasonInput}
-              placeholder="Reason for blur (shown to users)..."
-              placeholderTextColor={theme.colors.textSecondary}
-              style={{ backgroundColor: theme.colors.background, color: theme.colors.text, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.border }}
-              multiline
-            />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity 
-                onPress={() => { setShowBlurModal(false); setBlurReasonInput(''); }} 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => blurStory(currentViewerStory?.id, blurReasonInput.trim())} 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#F59E0B', alignItems: 'center' }}
-              >
-                <Text style={{ color: '#000', fontWeight: '600' }}>Blur</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
