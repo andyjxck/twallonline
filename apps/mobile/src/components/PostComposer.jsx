@@ -854,7 +854,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
                 </TouchableOpacity>
               </View>
 
-              {showSpotifyInput && (
+              {true && (
                 <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                     <Music size={16} color="#1DB954" style={{ marginRight: 8 }} />
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   offlineBannerText: { fontSize: 12, fontWeight: '600' },
   scrollView: { flex: 1 },
-  form: { padding: 16, paddingBottom: 120 },
+  form: { padding: 16, paddingBottom: 24 },
   
   metadataContainer: { marginBottom: 16 },
   metadataRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
