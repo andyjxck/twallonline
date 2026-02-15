@@ -30,6 +30,7 @@ import { generateRecoveryCodes, storeRecoveryCodes } from "../utils/recoveryCode
 import RecoveryCodesDisplay from "../components/RecoveryCodesDisplay";
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -374,6 +375,7 @@ export default function Auth() {
   if (showRecoveryCodes) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
+        <BackgroundPattern />
         <StatusBar style="light" />
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Recovery Codes</Text>
@@ -391,6 +393,7 @@ export default function Auth() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.container, isHippie && { backgroundColor: 'transparent' }]}
     >
+      <BackgroundPattern />
       <StatusBar style="light" />
       {!isHippie && (
         <LinearGradient

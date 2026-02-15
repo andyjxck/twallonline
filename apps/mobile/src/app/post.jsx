@@ -28,6 +28,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 let RichTextEditor;
 if (Platform.OS !== 'web') {
   RichTextEditor = require('../components/RichTextEditor').RichTextEditor;
@@ -597,6 +598,7 @@ export default function PostScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"} 
       style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}
     >
+      <BackgroundPattern />
       <View style={[styles.header, { paddingTop: insets.top + 10, borderBottomColor: isHippie ? 'rgba(255,255,255,0.1)' : theme.colors.border }]}>
         <TouchableOpacity onPress={() => goBack(router)} style={styles.closeBtn}>
           <X size={24} color={theme.colors.text} />

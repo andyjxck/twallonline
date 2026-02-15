@@ -9,6 +9,7 @@ import { crossAlert } from "../utils/alert";
 import { toast } from 'sonner-native';
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { goBack } from "@/utils/navigation";
 import { useAuth } from "../utils/auth/useAuth";
 import { useAuthStore } from "../utils/auth";
@@ -333,6 +334,7 @@ const handleSignOut = async () => {
     return (
 
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+      <BackgroundPattern />
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => goBack(router)} style={styles.backBtn}>
           <ChevronLeft size={28} color={theme.colors.text} />

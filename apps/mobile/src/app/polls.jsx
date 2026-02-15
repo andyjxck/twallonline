@@ -36,6 +36,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/utils/supabase';
 import { getStoredUser } from '@/utils/user';
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { moderateContent } from '@/utils/ai';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from "expo-linear-gradient";
@@ -444,6 +445,7 @@ const { data: poll, error: pollError } = await supabase
     <TouchableWithoutFeedback onPress={() => setShowFilterSortMenu(false)}>
       <View style={[styles.container, isHippie && { backgroundColor: 'transparent' }]}>
         {!isHippie && <LinearGradient colors={['#0F172A', '#000000', '#000000']} style={StyleSheet.absoluteFill} />}
+        <BackgroundPattern />
         <View style={{ paddingTop: insets.top, flex: 1 }}>
             <View style={styles.header}>
               <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>

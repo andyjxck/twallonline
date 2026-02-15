@@ -15,6 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import Markdown from 'react-native-markdown-display';
 
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocationStore } from '@/utils/locationStore';
 import { goBack } from '@/utils/navigation';
@@ -915,6 +916,7 @@ export default function HelpContact() {
 
   return (
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+      <BackgroundPattern />
       <StatusBar style={isLight ? "dark" : "light"} />
       {!isHippie && !isLight && (
         <LinearGradient

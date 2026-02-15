@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/utils/theme';
 import { goBack } from '@/utils/navigation';
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 
 export default function Guidelines() {
   const { isHippie } = useTheme();
@@ -14,6 +15,7 @@ export default function Guidelines() {
 
   return (
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+      <BackgroundPattern />
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => goBack(router)} style={styles.backBtn}>
           <ChevronLeft size={28} color={theme.colors.text} />

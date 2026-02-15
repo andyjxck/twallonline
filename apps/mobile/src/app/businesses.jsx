@@ -12,6 +12,7 @@ import { decode } from 'base64-arraybuffer';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 
 let Purchases;
 if (Platform.OS !== 'web') {
@@ -983,6 +984,7 @@ if (user?.id) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <BackgroundPattern />
       <View style={{ paddingTop: insets.top, flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>

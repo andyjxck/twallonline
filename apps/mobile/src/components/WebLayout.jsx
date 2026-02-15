@@ -11,6 +11,7 @@ import { crossAlert } from '../utils/alert';
 import { logoutUser } from '../utils/user';
 import { useChatStore, useAuthStore } from '../utils/auth';
 import { useTheme } from '../utils/ThemeContext';
+import BackgroundPattern from './BackgroundPattern';
 import { Image } from 'expo-image';
 import { supabase } from '../utils/supabase';
 import StoriesBar from './StoriesBar';
@@ -165,6 +166,7 @@ export default function WebLayout({ children }) {
     return (
       <View style={styles.root}>
         <View style={[styles.mainContent, { backgroundColor: theme.colors.background }]}>
+          <BackgroundPattern />
           {children}
         </View>
 

@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { Shield, Check, ChevronRight } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function TermsScreen() {
@@ -38,6 +39,7 @@ export default function TermsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isHippie ? 'transparent' : theme.colors.background }}>
+      <BackgroundPattern />
       {!isHippie && !isLight && (
         <LinearGradient
           colors={['#0F172A', '#000000']}

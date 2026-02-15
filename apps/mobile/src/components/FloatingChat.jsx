@@ -55,6 +55,7 @@ import {
   isEncrypted 
 } from '../utils/encryption';
 import { blockUser, BLOCK_REASONS, getBlockedUserIds, isBlocked } from '../utils/blocking';
+import BackgroundPattern from './BackgroundPattern';
 const { width, height } = Dimensions.get('window');
 const SOUNDS = {
   ringing: require('../../assets/sounds/ringtone.mp3'),
@@ -3374,6 +3375,7 @@ useEffect(() => {
           </TouchableOpacity>
           
             <Animated.View style={[styles.chatWindow, { transform: [{ translateY: slideAnim }], zIndex: 10 }]}>
+              <BackgroundPattern />
               <View style={[styles.chatHeader, { paddingTop: Platform.OS === 'web' ? 16 : insets.top + 8 }]}>
 
                   {showChatList ? (

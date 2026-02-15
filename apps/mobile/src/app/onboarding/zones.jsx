@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { setOnboardingComplete } from "@/utils/onboarding";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
@@ -62,6 +63,7 @@ export default function ZonesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+      <BackgroundPattern />
       <StatusBar style={isLight ? "dark" : "light"} />
         {!isHippie && !isLight && (
           <LinearGradient

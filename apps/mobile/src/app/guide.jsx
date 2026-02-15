@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { goBack } from "@/utils/navigation";
 import { LinearGradient } from "expo-linear-gradient";
 import { 
@@ -89,6 +90,7 @@ export default function GuideScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+      <BackgroundPattern />
       {!isHippie && !isLight && (
         <LinearGradient
           colors={['#0F172A', '#000000']}

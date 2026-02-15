@@ -66,6 +66,7 @@ import { BannerAd } from "@/components/BannerAd";
 import AdBanner from "./AdBanner";
 import PostItem from "./PostItem";
 import StoriesBar from "./StoriesBar";
+import BackgroundPattern from "./BackgroundPattern";
 import { subscribeToUnreadCount, sendNotification, sendReactionNotification } from "../utils/notifications";
 import { offlineStorage, syncService, subscribeToNetworkChanges, checkNetworkStatus } from "../utils/offline";
 import { useLocationStore } from "../utils/locationStore";
@@ -458,13 +459,7 @@ if (isOnline) syncPendingPosts();
 
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        {/* Tiled background pattern */}
-        <Image
-          source={require('../../assets/images/gback.png')}
-          style={[StyleSheet.absoluteFill, { opacity: 0.075 }]}
-          contentFit="repeat"
-          pointerEvents="none"
-        />
+        <BackgroundPattern />
   <View style={[styles.header, { paddingTop: Platform.OS === 'web' ? 16 : insets.top + 10 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                 {Platform.OS !== 'web' && (

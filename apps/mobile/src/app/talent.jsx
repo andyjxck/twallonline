@@ -5,6 +5,7 @@ import { ChevronLeft, Music, Youtube, Globe, Info, Plus, ExternalLink, ShieldChe
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '@/utils/supabase';
@@ -707,6 +708,7 @@ const { error } = await supabase
   
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <BackgroundPattern />
         <View style={{ paddingTop: insets.top, flex: 1 }}>
             <View style={styles.header}>
               <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>

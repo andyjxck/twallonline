@@ -56,6 +56,7 @@ import * as Haptics from "expo-haptics";
   import { ShareManager } from "../components/ShareManager";
   import { theme } from "../utils/theme";
   import { useTheme } from "@/utils/ThemeContext";
+  import BackgroundPattern from "@/components/BackgroundPattern";
 import { goBack } from "@/utils/navigation";
 import { crossAlert } from "@/utils/alert";
 import { toast } from 'sonner-native';
@@ -883,6 +884,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     if (loading && !user) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+        <BackgroundPattern />
         <ActivityIndicator color={theme.colors.primary} />
       </View>
       );
@@ -891,6 +893,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
     if (userIsBlocked) {
       return (
         <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+          <BackgroundPattern />
           <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
             <TouchableOpacity onPress={() => goBack(router)} style={styles.headerIcon}>
               <ChevronLeft color={theme.colors.text} size={28} />
@@ -911,6 +914,7 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
 
     return (
     <View style={[styles.container, { backgroundColor: isHippie ? 'transparent' : theme.colors.background }]}>
+      <BackgroundPattern />
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => goBack(router)} style={styles.headerIcon}>
           <ChevronLeft color={theme.colors.text} size={28} />

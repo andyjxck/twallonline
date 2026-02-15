@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocationStore } from "../../utils/locationStore";
 import { setOnboardingComplete } from "../../utils/onboarding";
 import { useTheme } from "../../utils/ThemeContext";
+import BackgroundPattern from "../../components/BackgroundPattern";
 import {
   detectLocation,
   fetchCities,
@@ -192,6 +193,7 @@ export default function CityScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isHippie ? 'transparent' : theme.colors.background }}>
+      <BackgroundPattern />
       {!isHippie && !isLight && (
         <LinearGradient colors={["#000", "#0a0a0a"]} style={StyleSheet.absoluteFill} />
       )}

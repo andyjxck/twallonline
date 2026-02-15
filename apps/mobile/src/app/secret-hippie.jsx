@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useTheme } from '@/utils/ThemeContext';
+import BackgroundPattern from '@/components/BackgroundPattern';
 import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/utils/auth';
 import { theme } from '@/utils/theme';
@@ -90,6 +91,7 @@ import HippieBackground from '@/components/HippieBackground';
 
   const Content = () => (
     <View style={styles.container}>
+      <BackgroundPattern />
       <View style={styles.card}>
         <Sparkles size={48} color={theme.colors.primary} style={styles.icon} />
         <Text style={styles.title}>You Found It!</Text>

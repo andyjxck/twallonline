@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { MapPin, ThumbsUp, Flag, Clock, Shield } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function WelcomeScreen() {
@@ -20,6 +21,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isHippie ? 'transparent' : "#000000" }}>
+      <BackgroundPattern />
       {!isHippie && (
         <LinearGradient
           colors={['#0F172A', '#000000']}

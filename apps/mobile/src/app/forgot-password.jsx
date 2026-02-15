@@ -21,6 +21,7 @@ import bcrypt from 'bcryptjs';
 import * as Crypto from 'expo-crypto';
 import { theme } from "../utils/theme";
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -76,6 +77,7 @@ export default function ForgotPassword() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.container, isHippie && { backgroundColor: 'transparent' }]}
     >
+      <BackgroundPattern />
       <StatusBar style="light" />
       {!isHippie && (
         <LinearGradient

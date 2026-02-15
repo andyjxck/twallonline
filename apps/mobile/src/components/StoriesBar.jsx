@@ -11,17 +11,18 @@ import {
   StyleSheet,
   Animated,
   TextInput,
+  FlatList,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { Plus, X, Trash2, AlertTriangle, EyeOff, Type, MoreVertical } from 'lucide-react-native';
+import { Plus, X, Trash2, AlertTriangle, EyeOff, Type, MoreVertical, Eye, Ban } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
 import { useTheme } from '../utils/ThemeContext';
 import { useAuthStore } from '../utils/auth';
 import { useLocationStore } from '../utils/locationStore';
-import { getBlockedUserIds } from '../utils/blocking';
+import { getBlockedUserIds, blockUser } from '../utils/blocking';
 import { toast } from 'sonner-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -52,6 +53,13 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   const [showBlurModal, setShowBlurModal] = useState(false);
   const [blurReasonInput, setBlurReasonInput] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Story viewers state
+  const [storyViewCount, setStoryViewCount] = useState(0);
+  const [storyViewers, setStoryViewers] = useState([]);
+  const [showViewersList, setShowViewersList] = useState(false);
+  const [loadingViewers, setLoadingViewers] = useState(false);
+  const [blockConfirmUser, setBlockConfirmUser] = useState(null);
 
   // Viewer state
   const [viewerVisible, setViewerVisible] = useState(false);
@@ -345,16 +353,80 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
     }
   };
 
+  // ─── STORY VIEW COUNT & VIEWERS ────────────────────────
+
+  const fetchStoryViewCount = async (storyId) => {
+    if (!storyId) return;
+    try {
+      const { count, error } = await supabase
+        .from('rstory_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('story_id', storyId);
+      if (!error) setStoryViewCount(count || 0);
+    } catch (err) {
+      console.error('Error fetching view count:', err);
+    }
+  };
+
+  const fetchStoryViewers = async (storyId) => {
+    if (!storyId) return;
+    setLoadingViewers(true);
+    try {
+      const { data, error } = await supabase
+        .from('rstory_views')
+        .select('*, viewer:rusers!rstory_views_viewer_id_fkey(id, username, emoji_icon, avatar_url)')
+        .eq('story_id', storyId)
+        .order('viewed_at', { ascending: false });
+      if (!error) setStoryViewers(data || []);
+    } catch (err) {
+      console.error('Error fetching viewers:', err);
+    } finally {
+      setLoadingViewers(false);
+    }
+  };
+
+  const openViewersList = () => {
+    if (!currentViewerStory?.id) return;
+    stopProgress();
+    fetchStoryViewers(currentViewerStory.id);
+    setShowViewersList(true);
+  };
+
+  const handleBlockFromStory = async (targetUser) => {
+    if (!user?.id || !targetUser?.id) return;
+    try {
+      await blockUser({
+        blockerId: user.id,
+        blockedId: targetUser.id,
+        source: 'story',
+        reason: 'Blocked from story viewers',
+      });
+      toast.success(`Blocked ${targetUser.username || 'user'}`);
+      setBlockConfirmUser(null);
+      // Refresh viewers list
+      fetchStoryViewers(currentViewerStory?.id);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to block user');
+    }
+  };
+
   // ─── VIEWER ─────────────────────────────────────────────
 
   const openViewer = (groupIndex) => {
     setViewerGroupIndex(groupIndex);
     setViewerStoryIndex(0);
     setViewerVisible(true);
+    setShowViewersList(false);
+    setBlockConfirmUser(null);
     markAsViewed(groupedStories[groupIndex]?.stories[0]?.id);
     const story = groupedStories[groupIndex]?.stories[0];
     if (!isVideo(story?.image_url)) startProgress(IMAGE_DURATION);
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Fetch view count for own stories
+    if (groupedStories[groupIndex]?.userId === user?.id && story?.id) {
+      fetchStoryViewCount(story.id);
+    }
   };
 
   const closeViewer = () => {
@@ -362,6 +434,8 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
     setShowStoryActions(false);
     setShowDeleteConfirm(false);
     setShowBlurModal(false);
+    setShowViewersList(false);
+    setBlockConfirmUser(null);
     stopProgress();
   };
 
@@ -395,6 +469,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       const nextStory = currentGroup.stories[nextIdx];
       if (!isVideo(nextStory?.image_url)) startProgress(IMAGE_DURATION);
       else stopProgress();
+      if (currentGroup.userId === user?.id) fetchStoryViewCount(nextStory?.id);
     } else if (viewerGroupIndex < groupedStories.length - 1) {
       const nextGroupIdx = viewerGroupIndex + 1;
       setViewerGroupIndex(nextGroupIdx);
@@ -403,6 +478,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       const nextStory = groupedStories[nextGroupIdx]?.stories[0];
       if (!isVideo(nextStory?.image_url)) startProgress(IMAGE_DURATION);
       else stopProgress();
+      if (groupedStories[nextGroupIdx]?.userId === user?.id) fetchStoryViewCount(nextStory?.id);
     } else {
       closeViewer();
     }
@@ -415,6 +491,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       const prevStory = groupedStories[viewerGroupIndex]?.stories[prevIdx];
       if (!isVideo(prevStory?.image_url)) startProgress(IMAGE_DURATION);
       else stopProgress();
+      if (groupedStories[viewerGroupIndex]?.userId === user?.id) fetchStoryViewCount(prevStory?.id);
     } else if (viewerGroupIndex > 0) {
       const prevGroupIdx = viewerGroupIndex - 1;
       const prevGroup = groupedStories[prevGroupIdx];
@@ -423,6 +500,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       const prevStory = prevGroup.stories[prevGroup.stories.length - 1];
       if (!isVideo(prevStory?.image_url)) startProgress(IMAGE_DURATION);
       else stopProgress();
+      if (prevGroup.userId === user?.id) fetchStoryViewCount(prevStory?.id);
     }
   };
 
@@ -668,6 +746,93 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
               {currentViewerStory.caption && !storyIsBlurred && (
                 <View style={styles.captionContainer} pointerEvents="none">
                   <Text style={styles.captionText}>{currentViewerStory.caption}</Text>
+                </View>
+              )}
+
+              {/* View count (own stories only) */}
+              {isOwnStory && !showViewersList && !showStoryActions && !showDeleteConfirm && !showBlurModal && (
+                <TouchableOpacity 
+                  onPress={openViewersList} 
+                  style={{ position: 'absolute', bottom: Platform.OS === 'web' ? 16 : 40, left: 16, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 }}
+                >
+                  <Eye size={16} color="#FFF" />
+                  <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>{storyViewCount}</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* ─── VIEWERS LIST (inside viewer modal) ─── */}
+              {showViewersList && (
+                <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}>
+                  <TouchableOpacity activeOpacity={1} onPress={() => { setShowViewersList(false); setBlockConfirmUser(null); startProgress(IMAGE_DURATION); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+                  <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface, maxHeight: '60%' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Eye size={18} color={theme.colors.text} />
+                        <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700' }}>Viewed by {storyViewCount}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => { setShowViewersList(false); setBlockConfirmUser(null); startProgress(IMAGE_DURATION); }}>
+                        <X size={20} color={theme.colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                    {loadingViewers ? (
+                      <ActivityIndicator style={{ padding: 30 }} color={theme.colors.primary} />
+                    ) : storyViewers.length === 0 ? (
+                      <Text style={{ color: theme.colors.textSecondary, textAlign: 'center', padding: 30, fontSize: 14 }}>No views yet</Text>
+                    ) : (
+                      <FlatList
+                        data={storyViewers}
+                        keyExtractor={(item) => item.id?.toString() || item.viewer_id}
+                        renderItem={({ item }) => (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 }}>
+                            {item.viewer?.avatar_url ? (
+                              <Image source={{ uri: item.viewer.avatar_url }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12 }} />
+                            ) : (
+                              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                                <Text style={{ fontSize: 18 }}>{item.viewer?.emoji_icon || '👤'}</Text>
+                              </View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: '600' }}>{item.viewer?.username || 'Unknown'}</Text>
+                              <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 }}>{getTimeAgo(item.viewed_at)}</Text>
+                            </View>
+                            {item.viewer_id !== user?.id && (
+                              <TouchableOpacity 
+                                onPress={() => setBlockConfirmUser(item.viewer)} 
+                                style={{ padding: 8 }}
+                              >
+                                <Ban size={16} color={theme.colors.error} />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        )}
+                      />
+                    )}
+                  </View>
+
+                  {/* Block confirm inline */}
+                  {blockConfirmUser && (
+                    <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]}>
+                      <TouchableOpacity activeOpacity={1} onPress={() => setBlockConfirmUser(null)} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
+                      <View style={{ backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, width: '80%', maxWidth: 300 }}>
+                        <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Block {blockConfirmUser.username}?</Text>
+                        <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 20 }}>They won't be able to see your stories or posts, and you won't see theirs.</Text>
+                        <View style={{ flexDirection: 'row', gap: 12 }}>
+                          <TouchableOpacity 
+                            onPress={() => setBlockConfirmUser(null)} 
+                            style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.border, alignItems: 'center' }}
+                          >
+                            <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            onPress={() => handleBlockFromStory(blockConfirmUser)} 
+                            style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.error, alignItems: 'center' }}
+                          >
+                            <Text style={{ color: '#FFF', fontWeight: '600' }}>Block</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
 

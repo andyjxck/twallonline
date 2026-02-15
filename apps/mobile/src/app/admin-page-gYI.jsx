@@ -50,6 +50,7 @@ import { crossAlert } from '@/utils/alert';
 import { toast } from 'sonner-native';
 import { sendNotification, notifyStaffOfAdminAction } from '@/utils/notifications';
 import { useTheme } from "@/utils/ThemeContext";
+import BackgroundPattern from "@/components/BackgroundPattern";
 import { getBlockLogs } from '@/utils/blocking';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from "expo-linear-gradient";
@@ -2246,6 +2247,7 @@ export default function ModerationAdmin() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <BackgroundPattern />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ paddingTop: insets.top, flex: 1 }}
