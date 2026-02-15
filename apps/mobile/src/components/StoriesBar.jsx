@@ -29,7 +29,9 @@ import SpotifyEmbed, { isValidSpotifyUrl } from './SpotifyEmbed';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STORY_SIZE = 68;
 const STORY_RING_SIZE = 74;
-const IMAGE_DURATION = 5000;
+const DEFAULT_DURATION = 5000;
+const MIN_DURATION = 3;
+const MAX_DURATION = 15;
 const MAX_CAPTION_LENGTH = 150;
 
 export default function StoriesBar({ vertical = false, reversed = false }) {
@@ -49,6 +51,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   const [showCaptionInput, setShowCaptionInput] = useState(false);
   const [pendingAsset, setPendingAsset] = useState(null);
   const [storySpotifyUrl, setStorySpotifyUrl] = useState('');
+  const [storyDuration, setStoryDuration] = useState(5);
 
   // Mod/delete state
   const [showStoryActions, setShowStoryActions] = useState(false);
@@ -221,6 +224,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         image_url: publicUrl,
         caption: captionInput.trim() || null,
         spotify_url: isValidSpotifyUrl(storySpotifyUrl) ? storySpotifyUrl.trim() : null,
+        duration: storyDuration,
         city_id: city_id !== 349 ? city_id : null,
         zone_id: zone_id || null,
       });
@@ -230,6 +234,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       toast.success('Story posted');
       setCaptionInput('');
       setStorySpotifyUrl('');
+      setStoryDuration(5);
       setPendingAsset(null);
       fetchStories();
     } catch (err) {
@@ -258,7 +263,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         // More stories remain — go to previous index or stay at 0
         const newIdx = viewerStoryIndex > 0 ? viewerStoryIndex - 1 : 0;
         setViewerStoryIndex(newIdx);
-        startProgress(IMAGE_DURATION);
+        startProgress(getStoryDuration(currentViewerStory));
       }
 
       await fetchStories();
@@ -346,7 +351,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       } else {
         const newIdx = viewerStoryIndex > 0 ? viewerStoryIndex - 1 : 0;
         setViewerStoryIndex(newIdx);
-        startProgress(IMAGE_DURATION);
+        startProgress(getStoryDuration(currentViewerStory));
       }
 
       await fetchStories();
@@ -425,7 +430,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
     setBlockConfirmUser(null);
     markAsViewed(groupedStories[groupIndex]?.stories[0]?.id);
     const story = groupedStories[groupIndex]?.stories[0];
-    if (!isVideo(story?.image_url)) startProgress(IMAGE_DURATION);
+    if (!isVideo(story?.image_url)) startProgress(getStoryDuration(story));
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Fetch view count for own stories
     if (groupedStories[groupIndex]?.userId === user?.id && story?.id) {
@@ -471,7 +476,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       setViewerStoryIndex(nextIdx);
       markAsViewed(currentGroup.stories[nextIdx]?.id);
       const nextStory = currentGroup.stories[nextIdx];
-      if (!isVideo(nextStory?.image_url)) startProgress(IMAGE_DURATION);
+      if (!isVideo(nextStory?.image_url)) startProgress(getStoryDuration(nextStory));
       else stopProgress();
       if (currentGroup.userId === user?.id) fetchStoryViewCount(nextStory?.id);
     } else if (viewerGroupIndex < groupedStories.length - 1) {
@@ -480,7 +485,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       setViewerStoryIndex(0);
       markAsViewed(groupedStories[nextGroupIdx]?.stories[0]?.id);
       const nextStory = groupedStories[nextGroupIdx]?.stories[0];
-      if (!isVideo(nextStory?.image_url)) startProgress(IMAGE_DURATION);
+      if (!isVideo(nextStory?.image_url)) startProgress(getStoryDuration(nextStory));
       else stopProgress();
       if (groupedStories[nextGroupIdx]?.userId === user?.id) fetchStoryViewCount(nextStory?.id);
     } else {
@@ -493,7 +498,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       const prevIdx = viewerStoryIndex - 1;
       setViewerStoryIndex(prevIdx);
       const prevStory = groupedStories[viewerGroupIndex]?.stories[prevIdx];
-      if (!isVideo(prevStory?.image_url)) startProgress(IMAGE_DURATION);
+      if (!isVideo(prevStory?.image_url)) startProgress(getStoryDuration(prevStory));
       else stopProgress();
       if (groupedStories[viewerGroupIndex]?.userId === user?.id) fetchStoryViewCount(prevStory?.id);
     } else if (viewerGroupIndex > 0) {
@@ -502,10 +507,14 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
       setViewerGroupIndex(prevGroupIdx);
       setViewerStoryIndex(prevGroup.stories.length - 1);
       const prevStory = prevGroup.stories[prevGroup.stories.length - 1];
-      if (!isVideo(prevStory?.image_url)) startProgress(IMAGE_DURATION);
+      if (!isVideo(prevStory?.image_url)) startProgress(getStoryDuration(prevStory));
       else stopProgress();
       if (prevGroup.userId === user?.id) fetchStoryViewCount(prevStory?.id);
     }
+  };
+
+  const getStoryDuration = (story) => {
+    return (story?.duration || 5) * 1000;
   };
 
   const handleVideoEnd = () => {
@@ -681,12 +690,6 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
               {/* Dim overlay */}
               <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.15)' }]} pointerEvents="none" />
 
-              {/* Left/right tap zones for prev/next */}
-              <View style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]} pointerEvents="box-none">
-                <TouchableOpacity activeOpacity={1} onPress={goPrevStory} style={{ flex: 1 }} />
-                <TouchableOpacity activeOpacity={1} onPress={goNextStory} style={{ flex: 1 }} />
-              </View>
-
               {/* Progress bars */}
               <View style={[styles.progressContainer, { paddingTop: Platform.OS === 'web' ? 16 : 50 }]} pointerEvents="none">
                 {currentViewerGroup.stories.map((s, i) => (
@@ -771,17 +774,25 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                 </TouchableOpacity>
               )}
 
+              {/* Left/right tap zones for prev/next — rendered after overlays so taps work */}
+              {!showViewersList && !showStoryActions && !showDeleteConfirm && !showBlurModal && (
+                <View style={[StyleSheet.absoluteFill, { flexDirection: 'row', zIndex: 5 }]} pointerEvents="box-none">
+                  <TouchableOpacity activeOpacity={1} onPress={goPrevStory} style={{ flex: 1 }} />
+                  <TouchableOpacity activeOpacity={1} onPress={goNextStory} style={{ flex: 2 }} />
+                </View>
+              )}
+
               {/* ─── VIEWERS LIST (inside viewer modal) ─── */}
               {showViewersList && (
                 <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}>
-                  <TouchableOpacity activeOpacity={1} onPress={() => { setShowViewersList(false); setBlockConfirmUser(null); startProgress(IMAGE_DURATION); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+                  <TouchableOpacity activeOpacity={1} onPress={() => { setShowViewersList(false); setBlockConfirmUser(null); startProgress(getStoryDuration(currentViewerStory)); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
                   <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface, maxHeight: '60%' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Eye size={18} color={theme.colors.text} />
                         <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700' }}>Viewed by {storyViewCount}</Text>
                       </View>
-                      <TouchableOpacity onPress={() => { setShowViewersList(false); setBlockConfirmUser(null); startProgress(IMAGE_DURATION); }}>
+                      <TouchableOpacity onPress={() => { setShowViewersList(false); setBlockConfirmUser(null); startProgress(getStoryDuration(currentViewerStory)); }}>
                         <X size={20} color={theme.colors.textSecondary} />
                       </TouchableOpacity>
                     </View>
@@ -850,7 +861,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
               {/* ─── INLINE ACTION SHEET (inside viewer modal) ─── */}
               {showStoryActions && (
                 <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}>
-                  <TouchableOpacity activeOpacity={1} onPress={() => { setShowStoryActions(false); startProgress(IMAGE_DURATION); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+                  <TouchableOpacity activeOpacity={1} onPress={() => { setShowStoryActions(false); startProgress(getStoryDuration(currentViewerStory)); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
                   <View style={[styles.actionSheet, { backgroundColor: theme.colors.surface }]}>
                     {isOwnStory && (
                       <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
@@ -892,7 +903,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                         )}
                       </>
                     )}
-                    <TouchableOpacity style={[styles.actionItem, { borderTopWidth: 1, borderTopColor: theme.colors.border }]} onPress={() => { setShowStoryActions(false); startProgress(IMAGE_DURATION); }}>
+                    <TouchableOpacity style={[styles.actionItem, { borderTopWidth: 1, borderTopColor: theme.colors.border }]} onPress={() => { setShowStoryActions(false); startProgress(getStoryDuration(currentViewerStory)); }}>
                       <Text style={[styles.actionItemText, { color: theme.colors.textSecondary }]}>Cancel</Text>
                     </TouchableOpacity>
                   </View>
@@ -986,7 +997,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
               {/* Top bar: close + post */}
               <View style={{ position: 'absolute', top: Platform.OS === 'web' ? 16 : 54, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 20 }}>
-                <TouchableOpacity onPress={() => { setShowCaptionInput(false); setPendingAsset(null); setCaptionInput(''); setStorySpotifyUrl(''); }} style={styles.viewerCloseBtn}>
+                <TouchableOpacity onPress={() => { setShowCaptionInput(false); setPendingAsset(null); setCaptionInput(''); setStorySpotifyUrl(''); setStoryDuration(5); }} style={styles.viewerCloseBtn}>
                   <X size={24} color="#FFF" />
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -995,6 +1006,30 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                 >
                   <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>Post</Text>
                 </TouchableOpacity>
+              </View>
+
+              {/* Duration selector */}
+              <View style={{ position: 'absolute', top: Platform.OS === 'web' ? 70 : 110, left: 16, right: 16, zIndex: 20 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}>
+                  <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600', marginRight: 10 }}>⏱ {storyDuration}s</Text>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {[3, 5, 7, 10, 15].map(d => (
+                      <TouchableOpacity
+                        key={d}
+                        onPress={() => setStoryDuration(d)}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 6,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          backgroundColor: storyDuration === d ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)',
+                        }}
+                      >
+                        <Text style={{ color: storyDuration === d ? '#FFF' : 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700' }}>{d}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               </View>
 
               {/* Caption input overlaid on media */}
