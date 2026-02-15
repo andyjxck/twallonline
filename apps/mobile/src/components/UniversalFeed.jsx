@@ -458,6 +458,13 @@ if (isOnline) syncPendingPosts();
 
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {/* Tiled background pattern */}
+        <Image
+          source={require('../../assets/images/gback.png')}
+          style={[StyleSheet.absoluteFill, { opacity: 0.06 }]}
+          contentFit="repeat"
+          pointerEvents="none"
+        />
   <View style={[styles.header, { paddingTop: Platform.OS === 'web' ? 16 : insets.top + 10 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                 {Platform.OS !== 'web' && (
