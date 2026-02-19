@@ -26,6 +26,7 @@ import { getStoredUser, isOnline as isUserOnline } from '../utils/user';
 import { theme } from '../utils/theme';
 import { sendNotification, sendMessageNotification, sendCallNotification } from '../utils/notifications';
 import { useChatStore, useAuthStore } from '../utils/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Video, useVideoPlayer, VideoView } from 'expo-video';
 import { Image } from 'expo-image';
@@ -118,6 +119,7 @@ const presenceChannelRef = useRef(null);
 const { setAuth } = useAuthStore();
 const router = useRouter();
   const [messages, setMessages] = useState([]);
+  const [deletedForMeIds, setDeletedForMeIds] = useState(new Set());
   const [inputText, setInputText] = useState('');
   const [draftMessage, setDraftMessage] = useState(null);
   const draftIdRef = useRef(`draft-${Date.now()}`);
@@ -524,15 +526,21 @@ useEffect(() => {
       if (!canUseMobileOnlyFeatures || isExpoGo) return;
       try {
         if (agoraEngine.current) {
-          await agoraEngine.current.disableAudio();
-          await agoraEngine.current.leaveChannel();
-          await agoraEngine.current.release();
+          try { await agoraEngine.current.disableAudio(); } catch {}
+          try { await agoraEngine.current.disableVideo(); } catch {}
+          try { await agoraEngine.current.leaveChannel(); } catch {}
+          try { await agoraEngine.current.release(); } catch {}
           agoraEngine.current = null;
-          setIsJoined(false);
-          setIsJoining(false);
         }
+        setIsJoined(false);
+        setIsJoining(false);
+        setRemoteUsers([]);
+        setRemoteVideoMap({});
       } catch (e) {
         console.error('Agora leave error:', e);
+        agoraEngine.current = null;
+        setIsJoined(false);
+        setIsJoining(false);
       }
     };
 
@@ -816,12 +824,35 @@ useEffect(() => {
                       msgWithSender.text = '🔒 Encrypted message';
                     }
                   }
-                  setMessages(prev => [...prev, msgWithSender]);
-                  setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+                  // Skip if user deleted this message locally
+                  if (!deletedForMeIds.has(msgWithSender.id)) {
+                    setMessages(prev => [...prev, msgWithSender]);
+                    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+                  }
                   markAllAsRead(activeChat.id);
                 }
               }
             }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'rmessages',
+            filter: `chat_id=eq.${activeChat.id}`,
+          },
+          (payload) => {
+            const updated = payload.new;
+            // Handle "delete for everyone" — message becomes system message with null text
+            if (updated.is_system && updated.text === null) {
+              setMessages(prev => prev.map(m =>
+                m.id === updated.id
+                  ? { ...m, text: '🗑️ This message was deleted', media_url: null, media_type: null, is_system: true }
+                  : m
+              ));
+            }
+          }
         )
         .on('presence', { event: 'sync' }, () => {
           const state = channel.presenceState();
@@ -1106,8 +1137,58 @@ useEffect(() => {
     setBlockedUserIds(ids);
   };
 
+  // Load locally deleted message IDs from AsyncStorage
+  const loadDeletedForMe = async (chatId) => {
+    try {
+      const key = `deleted_msgs_${user?.id}_${chatId}`;
+      const data = await AsyncStorage.getItem(key);
+      setDeletedForMeIds(data ? new Set(JSON.parse(data)) : new Set());
+    } catch { setDeletedForMeIds(new Set()); }
+  };
+
+  const deleteForMe = async (messageId) => {
+    try {
+      const key = `deleted_msgs_${user?.id}_${activeChat?.id}`;
+      const newSet = new Set(deletedForMeIds);
+      newSet.add(messageId);
+      setDeletedForMeIds(newSet);
+      await AsyncStorage.setItem(key, JSON.stringify([...newSet]));
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.success('Message deleted for you.');
+    } catch (err) {
+      console.error('Delete for me error:', err);
+      toast.error('Failed to delete message.');
+    }
+  };
+
+  const deleteForEveryone = async (message) => {
+    try {
+      // Replace message content with deletion notice
+      await supabase
+        .from('rmessages')
+        .update({ text: null, media_url: null, media_type: null, is_system: true })
+        .eq('id', message.id);
+      
+      // Update locally
+      setMessages(prev => prev.map(m => 
+        m.id === message.id 
+          ? { ...m, text: '🗑️ This message was deleted', media_url: null, media_type: null, is_system: true }
+          : m
+      ));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.success('Message deleted for everyone.');
+    } catch (err) {
+      console.error('Delete for everyone error:', err);
+      toast.error('Failed to delete message.');
+    }
+  };
+
   const handleMessageLongPress = async (message) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // Don't allow actions on system messages
+    if (message.is_system) return;
     
     // Check if there's an active keep session for this message where user hasn't unkept
     const { data: activeSession } = await supabase
@@ -1120,8 +1201,41 @@ useEffect(() => {
       .maybeSingle();
 
     const isKept = !!activeSession;
+    const isMyMessage = message.sender_id === user?.id;
+    const messageAge = Date.now() - new Date(message.created_at).getTime();
+    const canDeleteForEveryone = isMyMessage && messageAge < 10 * 60 * 1000; // 10 minutes
 
     const actions = [
+      // Delete for me — always available
+      {
+        text: 'Delete for me',
+        style: 'destructive',
+        onPress: () => {
+          crossAlert(
+            'Delete for me?',
+            'This message will be removed from your view only. Others can still see it.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => deleteForMe(message.id) }
+            ]
+          );
+        }
+      },
+      // Delete for everyone — only own messages within 10 minutes
+      ...(canDeleteForEveryone ? [{
+        text: 'Delete for everyone',
+        style: 'destructive',
+        onPress: () => {
+          crossAlert(
+            'Delete for everyone?',
+            'This message will be deleted for all participants. This cannot be undone.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete for everyone', style: 'destructive', onPress: () => deleteForEveryone(message) }
+            ]
+          );
+        }
+      }] : []),
       {
         text: isKept ? 'Unkeep' : 'Keep for everyone',
         onPress: async () => {
@@ -1331,7 +1445,13 @@ useEffect(() => {
       return msg;
     }));
     
-    setMessages(decryptedMessages);
+    // Load locally deleted message IDs and filter them out
+    await loadDeletedForMe(chatId);
+    const key = `deleted_msgs_${user?.id}_${chatId}`;
+    const deletedData = await AsyncStorage.getItem(key);
+    const deletedIds = deletedData ? new Set(JSON.parse(deletedData)) : new Set();
+    
+    setMessages(decryptedMessages.filter(m => !deletedIds.has(m.id)));
     setLoading(false);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 50);
   };
@@ -1764,6 +1884,7 @@ const stopRecording = async () => {
   };
 
     const agoraEngine = useRef(null);
+    const agoraRetryRef = useRef(false);
     const [isJoined, setIsJoined] = useState(false);
     const [isJoining, setIsJoining] = useState(false);
     const [remoteUsers, setRemoteUsers] = useState([]);
@@ -1920,6 +2041,18 @@ const stopRecording = async () => {
         console.error('Agora setup error:', e);
         setDebugStatus('Setup failed');
         setIsJoining(false);
+        
+        // Auto-retry once after 2 seconds
+        if (!agoraRetryRef.current) {
+          agoraRetryRef.current = true;
+          setTimeout(() => {
+            agoraRetryRef.current = false;
+            if (activeCallRef.current?.status === 'active' && !isJoined) {
+              console.log('[DEBUG-CALL] Auto-retrying Agora setup...');
+              setupAgora();
+            }
+          }, 2000);
+        }
       }
     };
 
@@ -2117,56 +2250,55 @@ useEffect(() => {
     const answerCall = async () => {
       if (!activeCall) return;
       
-      // For group calls, don't change status - just join as participant
-      // For 1-on-1 calls, set to active
-      if (!activeCall.is_group_call) {
-        await supabase.from('rcalls').update({ status: 'active' }).eq('id', activeCall.id);
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      stopSound('ringing');
       
-      await supabase.from('rcall_participants').insert({
-        call_id: activeCall.id,
-        user_id: user.id
-      });
-    
-    stopSound('ringing');
-    playSound('connect');
+      // Immediately update local state for instant UI feedback
       setActiveCall(prev => ({ ...prev, status: 'active' }));
       setIsCameraOn(activeCall.call_type === 'video');
+      playSound('connect');
       startCallTimer();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // DB updates in parallel (non-blocking for UI)
+      const dbOps = [
+        supabase.from('rcall_participants').insert({
+          call_id: activeCall.id,
+          user_id: user.id
+        })
+      ];
+      
+      if (!activeCall.is_group_call) {
+        dbOps.push(supabase.from('rcalls').update({ status: 'active' }).eq('id', activeCall.id));
+      }
+      
+      await Promise.all(dbOps);
+      
+      // Trigger Agora setup immediately instead of waiting for useEffect
+      setupAgora();
   };
 
   const declineCall = async () => {
     if (!activeCall) return;
     
-    // Get caller name for the missed call message
+    const chatId = activeCall.chat_id;
+    const callId = activeCall.id;
     const callerName = activeCall.chat?.is_group 
       ? (activeCall.chat.group_name || 'Someone')
       : (getOtherUser(activeCall.chat)?.username || 'Someone');
     const missedCallText = `@${callerName} called. No answer.`;
     
-    await supabase.from('rcalls').update({ 
-      status: 'declined',
-      ended_at: new Date().toISOString()
-    }).eq('id', activeCall.id);
-    
-    // Send system message
-    await supabase.from('rmessages').insert({
-      chat_id: activeCall.chat_id,
-      sender_id: user.id,
-      text: missedCallText,
-      is_system: true
-    });
-
-    await supabase.from('rchats').update({
-      last_message: missedCallText,
-      last_message_at: new Date().toISOString()
-    }).eq('id', activeCall.chat_id);
-
+    // End UI immediately
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     stopSound('ringing');
     playSound('disconnect');
     endCallUI();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    
+    // DB updates in background
+    Promise.all([
+      supabase.from('rcalls').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', callId),
+      supabase.from('rmessages').insert({ chat_id: chatId, sender_id: user.id, text: missedCallText, is_system: true }),
+      supabase.from('rchats').update({ last_message: missedCallText, last_message_at: new Date().toISOString() }).eq('id', chatId),
+    ]).catch(err => console.error('Decline call DB error:', err));
   };
 
   const endCall = async () => {
@@ -2174,37 +2306,29 @@ useEffect(() => {
     
     const wasActive = activeCall.status === 'active';
     const durationText = formatCallDuration(callDuration);
+    const chatId = activeCall.chat_id;
+    const callId = activeCall.id;
+    const callType = activeCall.call_type;
+    const isGroup = activeCall.chat?.is_group;
     
     // Get caller name for missed call message
-    const callerName = activeCall.chat?.is_group 
+    const callerName = isGroup 
       ? (activeCall.chat.group_name || 'Someone')
       : (getOtherUser(activeCall.chat)?.username || 'Someone');
     const missedCallText = `@${callerName} called. No answer.`;
+    const systemText = wasActive ? `${callType === 'video' ? 'Video' : 'Voice'} call ${durationText}` : missedCallText;
     
-    await supabase.from('rcalls').update({ 
-      status: 'ended',
-      ended_at: new Date().toISOString()
-    }).eq('id', activeCall.id);
-    
-    await supabase.from('rcall_participants').update({
-      left_at: new Date().toISOString()
-    }).eq('call_id', activeCall.id).eq('user_id', user.id);
-
-    // Send system message
-    await supabase.from('rmessages').insert({
-      chat_id: activeCall.chat_id,
-      sender_id: user.id,
-      text: wasActive ? `${activeCall.call_type === 'video' ? 'Video' : 'Voice'} call ${durationText}` : missedCallText,
-      is_system: true
-    });
-
-    await supabase.from('rchats').update({
-      last_message: wasActive ? `${activeCall.call_type === 'video' ? 'Video' : 'Voice'} call ${durationText}` : missedCallText,
-      last_message_at: new Date().toISOString()
-    }).eq('id', activeCall.chat_id);
-    
-    endCallUI();
+    // End UI immediately for instant feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    endCallUI();
+    
+    // DB updates in background (non-blocking)
+    Promise.all([
+      supabase.from('rcalls').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', callId),
+      supabase.from('rcall_participants').update({ left_at: new Date().toISOString() }).eq('call_id', callId).eq('user_id', user.id),
+      supabase.from('rmessages').insert({ chat_id: chatId, sender_id: user.id, text: systemText, is_system: true }),
+      supabase.from('rchats').update({ last_message: systemText, last_message_at: new Date().toISOString() }).eq('id', chatId),
+    ]).catch(err => console.error('End call DB error:', err));
   };
 
     const toggleMute = () => {

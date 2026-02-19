@@ -828,7 +828,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
             </View>
           )}
 
-          {true && (
+          {showSpotifyInput && (
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginTop: 8 }}>
               <Music size={16} color="#1DB954" style={{ marginRight: 8 }} />
               <TextInput
