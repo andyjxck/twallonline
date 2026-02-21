@@ -518,7 +518,7 @@ export default function Auth() {
                     <View style={styles.rulesTextContainer}>
                       <Text style={styles.rulesText}>
                         I agree to follow the{' '}
-                        <Text style={styles.rulesLink} onPress={() => router.push("/community-rules")}>
+                        <Text style={styles.rulesLink} onPress={() => router.push("/guidelines")}>
                           Community Rules
                         </Text>
                       </Text>
