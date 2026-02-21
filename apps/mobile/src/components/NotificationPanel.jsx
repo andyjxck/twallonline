@@ -53,6 +53,7 @@ export default function NotificationPanel({ visible, onClose }) {
   const wasVisible = useRef(visible);
   const [reportDetailModal, setReportDetailModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !visible) return;
@@ -196,6 +197,64 @@ export default function NotificationPanel({ visible, onClose }) {
     }
   };
 
+  const getFilteredNotifications = () => {
+    switch (activeTab) {
+      case 'mentions':
+        return notifications.filter(n => n.type === 'mention' || n.title?.includes('mentioned you'));
+      case 'social':
+        return notifications.filter(n => 
+          n.type === 'friend_request' || 
+          n.type === 'friend_accepted' || 
+          n.type === 'follow' ||
+          n.title?.includes('friend') ||
+          n.title?.includes('follow')
+        );
+      case 'moderation':
+        return notifications.filter(n => 
+          n.type === 'moderation_action' || 
+          n.title?.includes('Report') ||
+          n.title?.includes('moderated')
+        );
+      case 'system':
+        return notifications.filter(n => 
+          n.type === 'system' ||
+          n.title?.includes('Welcome') ||
+          n.title?.includes('update')
+        );
+      default:
+        return notifications;
+    }
+  };
+
+  const getUnreadCount = (type) => {
+    switch (type) {
+      case 'mentions':
+        return notifications.filter(n => !n.is_read && (n.type === 'mention' || n.title?.includes('mentioned you'))).length;
+      case 'social':
+        return notifications.filter(n => !n.is_read && (
+          n.type === 'friend_request' || 
+          n.type === 'friend_accepted' || 
+          n.type === 'follow' ||
+          n.title?.includes('friend') ||
+          n.title?.includes('follow')
+        )).length;
+      case 'moderation':
+        return notifications.filter(n => !n.is_read && (
+          n.type === 'moderation_action' || 
+          n.title?.includes('Report') ||
+          n.title?.includes('moderated')
+        )).length;
+      case 'system':
+        return notifications.filter(n => !n.is_read && (
+          n.type === 'system' ||
+          n.title?.includes('Welcome') ||
+          n.title?.includes('update')
+        )).length;
+      default:
+        return notifications.filter(n => !n.is_read).length;
+    }
+  };
+
   const handleNotificationPress = (item) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     handleMarkAsRead(item.id);
@@ -256,7 +315,7 @@ export default function NotificationPanel({ visible, onClose }) {
     if (type === 'reaction' || type === 'like' || type === 'superlike' || item.title?.includes('liked') || item.title?.includes('reaction')) {
       onClose();
       if (metadata.postId) {
-        setTimeout(() => router.push(`/?highlightPost=${metadata.postId}`), 100);
+        setTimeout(() => router.push(`/post/${metadata.postId}`), 100);
       }
       return;
     }
@@ -265,7 +324,7 @@ export default function NotificationPanel({ visible, onClose }) {
     if (type === 'comment' || item.title?.includes('commented')) {
       onClose();
       if (metadata.postId) {
-        setTimeout(() => router.push(`/?highlightPost=${metadata.postId}`), 100);
+        setTimeout(() => router.push(`/post/${metadata.postId}`), 100);
       }
       return;
     }
@@ -452,6 +511,61 @@ export default function NotificationPanel({ visible, onClose }) {
                 <Text style={[styles.markAllText, { color: theme.colors.primary }]}>Mark all as read</Text>
               </TouchableOpacity>
             </View>
+            
+            <View style={styles.tabsContainer}>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'all' && styles.activeTab]} 
+                onPress={() => setActiveTab('all')}
+              >
+                <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+                  All
+                </Text>
+                {getUnreadCount('all') > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{getUnreadCount('all')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'mentions' && styles.activeTab]} 
+                onPress={() => setActiveTab('mentions')}
+              >
+                <Text style={[styles.tabText, activeTab === 'mentions' && styles.activeTabText]}>
+                  @Mentions
+                </Text>
+                {getUnreadCount('mentions') > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{getUnreadCount('mentions')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'social' && styles.activeTab]} 
+                onPress={() => setActiveTab('social')}
+              >
+                <Text style={[styles.tabText, activeTab === 'social' && styles.activeTabText]}>
+                  Social
+                </Text>
+                {getUnreadCount('social') > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{getUnreadCount('social')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'moderation' && styles.activeTab]} 
+                onPress={() => setActiveTab('moderation')}
+              >
+                <Text style={[styles.tabText, activeTab === 'moderation' && styles.activeTabText]}>
+                  Moderation
+                </Text>
+                {getUnreadCount('moderation') > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{getUnreadCount('moderation')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
 
             {loading ? (
               <View style={styles.centered}>
@@ -459,14 +573,19 @@ export default function NotificationPanel({ visible, onClose }) {
               </View>
             ) : (
               <FlatList
-                data={notifications}
+                data={getFilteredNotifications()}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={true}
                 ListEmptyComponent={
                   <View style={styles.emptyContainer}>
-                    <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>All caught up!</Text>
+                    <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+                      {activeTab === 'mentions' ? 'No mentions yet' : 
+                       activeTab === 'social' ? 'No social notifications' :
+                       activeTab === 'moderation' ? 'No moderation notifications' :
+                       'All caught up!'}
+                    </Text>
                   </View>
                 }
                 style={{ maxHeight: 400 }}
@@ -519,6 +638,51 @@ const styles = StyleSheet.create({
   },
   markAllText: {
     fontSize: 11,
+    fontWeight: 'bold',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    marginBottom: 15,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  tab: {
+    minWidth: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    position: 'relative',
+  },
+  activeTab: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+  },
+  activeTabText: {
+    color: '#3B82F6',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
     fontWeight: 'bold',
   },
   centered: {

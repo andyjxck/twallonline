@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator, ScrollView, TextInput, Dimensions, KeyboardAvoidingView, Platform, Modal, Image, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
@@ -275,8 +276,9 @@ export default function ModerationAdmin() {
           supabase
             .from('rposts')
             .select(`*, rusers(username), rzones(name)`)
-            .eq('moderation_status', 'flagged')
-            .eq('is_deleted', false),
+            .in('moderation_status', ['flagged'])
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false }),
           supabase
             .from('rreactions')
             .select(`post_id, post:rposts(*, rusers(username), rzones(name))`)
@@ -596,7 +598,12 @@ export default function ModerationAdmin() {
               });
               result = [];
           }
-          setData(result || []);
+          // Filter out dismissed items
+      AsyncStorage.getItem('dismissedReports').then(stored => {
+        const dismissed = JSON.parse(stored || '[]');
+        const filtered = (result || []).filter(item => !dismissed.includes(item.id));
+        setData(filtered);
+      });
         } catch (error) {
           console.error(error);
           toast.error("Failed to fetch data.");
@@ -1261,15 +1268,29 @@ export default function ModerationAdmin() {
               updateData = { action: 'rejected' };
             } else if (report.type === 'flagged_post') {
               table = 'rposts';
-              updateData = { moderation_status: 'approved' };
+              updateData = { moderation_status: 'resolved' };
             }
           }
         }
 
-      const { error } = await supabase.from(table).update(updateData).eq('id', itemId.toString().startsWith?.('post_') ? itemId.replace('post_', '') : itemId);
+      const actualId = itemId.toString().startsWith?.('post_') ? itemId.replace('post_', '') : itemId;
+      
+      const { error } = await supabase.from(table).update(updateData).eq('id', actualId);
       if (error) throw error;
       
-      setData(prev => prev.filter(p => p.id !== itemId));
+      // Remove the item permanently and prevent re-adding
+      setData(prev => {
+        const filtered = prev.filter(p => p.id !== itemId);
+        // Store dismissed items to prevent them from being re-added
+        AsyncStorage.getItem('dismissedReports').then(stored => {
+          const dismissed = JSON.parse(stored || '[]');
+          if (!dismissed.includes(itemId)) {
+            dismissed.push(itemId);
+            AsyncStorage.setItem('dismissedReports', JSON.stringify(dismissed));
+          }
+        });
+        return filtered;
+      });
       toast.success(`Item has been ${action}d.`);
     } catch (error) {
       console.error(error);
@@ -1791,10 +1812,10 @@ export default function ModerationAdmin() {
                           {item.source?.toUpperCase() || 'PROFILE'}
                         </Text>
                       </View>
-                        {item.post_id && (
+                        {item.post_id && item.post_id !== 'undefined' && item.post_id !== undefined && (
                           <TouchableOpacity onPress={() => {
                             useFeedHighlightStore.getState().setHighlightedPost(item.post_id);
-                            router.push('/');
+                            router.push(`/post/${item.post_id}`);
                           }}>
                             <Text style={[styles.viewPostLink, { color: theme.colors.primary }]}>View Post</Text>
                           </TouchableOpacity>
@@ -1896,7 +1917,7 @@ export default function ModerationAdmin() {
                   if (item.target_type === 'post') {
                     const { data: post } = await supabase.from('rposts').select('*, rusers(*)').eq('id', item.target_id).maybeSingle();
                     if (post) { setPreviewPost(post); }
-                    else { useFeedHighlightStore.getState().setHighlightedPost(item.target_id); router.push('/'); }
+                    else { useFeedHighlightStore.getState().setHighlightedPost(item.target_id); router.push(`/post/${item.target_id}`); }
                   } else if (item.target_type === 'user' && item.action === 'delete_post') {
                     const rm = item.reason?.match(/report\s+(\d+)/i);
                     if (rm) {
@@ -2020,11 +2041,11 @@ export default function ModerationAdmin() {
                   onPress={() => {
                     if (isFlaggedPost) {
                       useFeedHighlightStore.getState().setHighlightedPost(item.original_id);
-                      router.push('/');
+                      item.original_id && router.push(`/post/${item.original_id}`);
                     } else if (isDirectReport) {
                       if (item.target_type === 'post') {
                         useFeedHighlightStore.getState().setHighlightedPost(item.target_id);
-                        router.push('/');
+                        item.original_id && router.push(`/post/${item.original_id}`);
                       } else if (item.target_type === 'chat') {
                         useChatStore.getState().setActiveChatId(item.target_id);
                         useChatStore.getState().open();
@@ -2034,7 +2055,7 @@ export default function ModerationAdmin() {
                         router.push(`/profile?userId=${item.target_id}`);
                       } else if (item.target_type === 'post') {
                         useFeedHighlightStore.getState().setHighlightedPost(item.target_id);
-                        router.push('/');
+                        item.original_id && router.push(`/post/${item.original_id}`);
                       }
                     }
                   }}
@@ -2613,7 +2634,7 @@ export default function ModerationAdmin() {
                         style={[styles.topPostItem, { backgroundColor: theme.colors.background + '40', borderColor: theme.colors.border }]}
                         onPress={() => {
                           useFeedHighlightStore.getState().setHighlightedPost(post.id);
-                          router.push('/');
+                          item.original_id && router.push(`/post/${item.original_id}`);
                         }}
                       >
                         <View style={[styles.rankBadge, { backgroundColor: i === 0 ? '#F59E0B' : i === 1 ? '#94A3B8' : i === 2 ? '#CD7F32' : theme.colors.background }]}>
@@ -2790,7 +2811,7 @@ export default function ModerationAdmin() {
                         style={[styles.topPostItem, { backgroundColor: theme.colors.background + '40', borderColor: theme.colors.border }]}
                         onPress={() => {
                           useFeedHighlightStore.getState().setHighlightedPost(comment.post_id);
-                          router.push('/');
+                          item.original_id && router.push(`/post/${item.original_id}`);
                         }}
                       >
                         <Text style={[styles.commentUser, { color: theme.colors.primary }]}>@{comment.rusers?.username || 'unknown'}</Text>
@@ -2970,7 +2991,7 @@ export default function ModerationAdmin() {
                               onPress={() => {
                                 setAnalyticsDetailModal(null);
                                 useFeedHighlightStore.getState().setHighlightedPost(item.id);
-                                router.push('/');
+                                item.original_id && router.push(`/post/${item.original_id}`);
                               }}
                             >
                             <Text style={styles.detailItemEmoji}>{item.rusers?.emoji_icon || '📝'}</Text>
@@ -2994,7 +3015,7 @@ export default function ModerationAdmin() {
                               onPress={() => {
                                 setAnalyticsDetailModal(null);
                                 useFeedHighlightStore.getState().setHighlightedPost(item.post_id);
-                                router.push('/');
+                                item.original_id && router.push(`/post/${item.original_id}`);
                               }}
                             >
                             <Text style={styles.detailItemEmoji}>{item.reaction_type}</Text>
@@ -3015,7 +3036,7 @@ export default function ModerationAdmin() {
                               onPress={() => {
                                 setAnalyticsDetailModal(null);
                                 useFeedHighlightStore.getState().setHighlightedPost(item.post_id);
-                                router.push('/');
+                                item.original_id && router.push(`/post/${item.original_id}`);
                               }}
                             >
                             <Text style={styles.detailItemEmoji}>💬</Text>
@@ -3068,7 +3089,7 @@ export default function ModerationAdmin() {
                               onPress={() => {
                                 setAnalyticsDetailModal(null);
                                 useFeedHighlightStore.getState().setHighlightedPost(item.id);
-                                router.push('/');
+                                item.original_id && router.push(`/post/${item.original_id}`);
                               }}
                             >
                             <Text style={styles.detailItemEmoji}>{item.rusers?.emoji_icon || '📍'}</Text>

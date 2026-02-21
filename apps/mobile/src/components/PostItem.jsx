@@ -12,6 +12,9 @@ import {
 } from "react-native";
 import { crossAlert } from '../utils/alert';
 import { toast } from 'sonner-native';
+import HashtagText from './HashtagText';
+import { mentionService } from '../utils/mentionService';
+import townyAI from '../utils/townyAI';
 import {
     Heart,
     Star,
@@ -46,11 +49,12 @@ import { useChatStore } from "../utils/auth";
 import { useTheme } from "../utils/ThemeContext";
 import { supabase } from "../utils/supabase";
 import { moderateContent } from "../utils/ai";
-import { sendNotification, sendCommentNotification } from "../utils/notifications";
+import { sendNewPostNotification, sendFollowerPostNotification, sendMentionNotification, sendCommentNotification } from "../utils/notifications";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { getStoredUser, isOnline } from "../utils/user";
+import { useAuthStore } from "../utils/auth";
 import { TextInput } from "react-native-gesture-handler";
 import RenderHtml from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
@@ -61,14 +65,16 @@ import { blockUser, BLOCK_REASONS } from "../utils/blocking";
 import { reportPost, reportComment, REPORT_REASONS } from "../utils/reporting";
 import WebGifPicker from "./WebGifPicker";
 import SpotifyEmbed from "./SpotifyEmbed";
+import ModerationModal from "./ModerationModal";
 
-const markdownToHtml = (text) => {
+const markdownToHtml = (text, onHashtagPress) => {
   if (!text) return '';
   return text
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
     .replace(/\*(.+?)\*/g, '<i>$1</i>')
-    .replace(/__(.+?)__/g, '<u>$1</u>')
-    .replace(/\n/g, '<br/>');
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/#([a-zA-Z0-9_\-]+)/g, '<span style="color: #007AFF; font-weight: 600;">#$1</span>')
+    .replace(/\n/g, '<br>');
 };
 
 const VideoPreview = ({ url, isExpanded, style }) => {
@@ -114,10 +120,21 @@ const FullVideoPlayer = ({ url, style }) => {
   );
 };
 
-export default function PostItem({ item, deviceId, onReaction, onComment, onDelete, onShare, onEdit, user, onFilterZone, onFilterTag, onModAction, isHighlighted }) {
+export default function PostItem({ item, deviceId, onReaction, onComment, onDelete, onShare, onEdit, user, onFilterZone, onFilterTag, onModAction, isHighlighted, onHashtagPress }) {
   if (!item) return null;
   const { theme, isHippie, isLight } = useTheme();
   const { width } = useWindowDimensions();
+  
+  const currentUser = useAuthStore(state => state.auth);
+  const [postingAs, setPostingAs] = useState(currentUser?.active_identity || 'personal');
+  
+  useEffect(() => {
+    console.log('PostItem currentUser:', currentUser);
+    console.log('PostItem postingAs:', postingAs);
+    if (currentUser?.active_identity) {
+      setPostingAs(currentUser.active_identity);
+    }
+  }, [currentUser?.active_identity]);
   const router = useRouter();
   const images = item?.image_urls || (item?.image_url ? [item.image_url] : []);
   
@@ -132,8 +149,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   const [isAnonComment, setIsAnonComment] = useState(false);
   const [userNickname, setUserNickname] = useState("");
   const [showModMenu, setShowModMenu] = useState(false);
-  const [showBlurModal, setShowBlurModal] = useState(false);
-  const [blurReasonInput, setBlurReasonInput] = useState("");
+  const [showModerationModal, setShowModerationModal] = useState(false);
   const [selectedGif, setSelectedGif] = useState(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockReason, setBlockReason] = useState("");
@@ -145,6 +161,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
   const [replyingTo, setReplyingTo] = useState(null);
   const [commentLikes, setCommentLikes] = useState({});
   const [showcaseInfo, setShowcaseInfo] = useState(null);
+  const [commentShowcaseInfo, setCommentShowcaseInfo] = useState({});
 
   useEffect(() => {
     if (!item?.user || item.is_anonymous) return;
@@ -158,6 +175,34 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         .then(({ data }) => { if (data) setShowcaseInfo(data); });
     }
   }, [item?.posted_as_identity, item?.user?.talent_showcase_id, item?.user?.business_showcase_id]);
+
+  // Fetch showcase info for comments
+  useEffect(() => {
+    if (!comments.length) return;
+    
+    const fetchCommentShowcaseInfo = async () => {
+      const newShowcaseInfo = { ...commentShowcaseInfo };
+      
+      for (const comment of comments) {
+        if (!comment.user || comment.is_anonymous || newShowcaseInfo[comment.id]) continue;
+        
+        const commentIdentity = comment.posted_as_identity;
+        const u = comment.user;
+        
+        if (commentIdentity === 'talent' && u.talent_showcase_id) {
+          const { data } = await supabase.from('rtalent').select('name, avatar_url').eq('id', u.talent_showcase_id).single();
+          if (data) newShowcaseInfo[comment.id] = data;
+        } else if (commentIdentity === 'business' && u.business_showcase_id) {
+          const { data } = await supabase.from('rbusinesses').select('name, avatar_url').eq('id', u.business_showcase_id).single();
+          if (data) newShowcaseInfo[comment.id] = data;
+        }
+      }
+      
+      setCommentShowcaseInfo(newShowcaseInfo);
+    };
+    
+    fetchCommentShowcaseInfo();
+  }, [comments]);
 
   const dynamicStyles = useMemo(() => StyleSheet.create({
     username: { ...styles.username, color: theme.colors.text },
@@ -444,12 +489,32 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
     }
   };
 
+  const handleDeleteComment = async (commentId) => {
+    try {
+      const { error } = await supabase
+        .from('rcomments')
+        .delete()
+        .eq('id', commentId);
+      
+      if (error) throw error;
+      
+      // Remove from local state
+      setComments(comments.filter(c => c.id !== commentId));
+      
+      toast.success('Comment deleted');
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Failed to delete comment');
+    }
+  };
+
   const handleSendComment = async () => {
     if (!commentText.trim() && !selectedGif) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       const storedUser = await getStoredUser();
       const gifUrl = selectedGif?.url || null;
+      const notifyUserId = item.user_id;
       const { data: commentData, error } = await supabase.from('rcomments').insert({
         post_id: item.id,
         user_id: storedUser?.id,
@@ -458,16 +523,44 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
         is_anonymous: isAnonComment,
         nickname: isAnonComment ? userNickname : null,
         gif_url: gifUrl,
-        parent_comment_id: replyingTo?.id || null
+        parent_comment_id: replyingTo?.id || null,
+        posted_as_identity: isAnonComment ? 'personal' : postingAs
       }).select(`*, user:rusers (username, emoji_icon, avatar_url, nickname)`).single();
       
-      if (error) {
-        console.error('Comment insert error:', error);
-        return;
+      // Process hashtags for new comment
+      if (commentData && commentText.trim()) {
+        const { hashtagService } = await import('../utils/hashtagService');
+        await hashtagService.processHashtags(commentData.id, 'comment', commentText.trim());
+        
+        // Process mentions for new comment
+        const mentions = mentionService.extractUsernames(commentText.trim());
+        if (mentions.length > 0) {
+          await mentionService.createCommentMentions(commentData.id, mentions, storedUser?.id);
+          
+          // Check if @towny was mentioned
+          if (townyAI.isTownyMentioned(commentText.trim())) {
+            await townyAI.moderatePost(commentText.trim(), item.id, storedUser?.id);
+          }
+          
+          // Send mention notifications
+          const mentionedUsers = await mentionService.getMentionedUsers(commentText.trim());
+          for (const mentionedUser of mentionedUsers) {
+            if (mentionedUser.id !== storedUser?.id) {
+              await sendMentionNotification({
+                mentioningUserId: storedUser?.id,
+                mentioningUsername: storedUser?.username,
+                mentionedUserId: mentionedUser.id,
+                postId: item.id,
+                commentId: commentData.id,
+                contentType: 'comment'
+              });
+            }
+          }
+        }
       }
-
-      // Notify post owner or parent comment owner
-      const notifyUserId = replyingTo ? replyingTo.user_id : item.user_id;
+      
+      if (error) throw error;
+      
       if (notifyUserId && notifyUserId !== storedUser?.id) {
           await sendCommentNotification({
             commenterUsername: storedUser?.username || 'Someone',
@@ -504,13 +597,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
     }
   };
 
-  const handleBlurPost = () => {
-    if (!blurReasonInput.trim()) return;
-    handleModAction('blur', blurReasonInput.trim());
-    setShowBlurModal(false);
-    setBlurReasonInput("");
-  };
-
+  
   const handleBlockFromPost = async () => {
     if (!blockReason || !user?.id || !item.user_id || item.user_id === user.id) return;
     try {
@@ -699,6 +786,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                 }
               }} 
               style={[styles.body, { flex: 1 }]}
+              hitSlop={{ top: 0, bottom: 0, left: 0, right: 0 }}
             >
               {isCurrentlyBlurred ? (
                   <View style={styles.blurredContentWrapper}>
@@ -711,8 +799,76 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                     ) : isBlurredByMod ? (
                       <View style={styles.modBlurOverlay}>
                         <EyeOff size={18} color="#FFF" />
-                        <Text style={styles.blurTextContent}>Post blurred: {item.blur_reason}</Text>
-                        <Text style={styles.tapToRevealText}>Tap to reveal</Text>
+                        <Text style={styles.blurTextContent}>
+                          {(() => {
+                            try {
+                              const reasonData = JSON.parse(item.blur_reason);
+                              const violations = reasonData.violations || [];
+                              const customReason = reasonData.custom_reason;
+                              const moderatorName = reasonData.moderator_username || 'Moderator';
+                              const timestamp = new Date(reasonData.timestamp).toLocaleDateString();
+                              
+                              return (
+                                <View>
+                                  <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', marginBottom: 4 }}>
+                                    POST MODERATED
+                                  </Text>
+                                  <Text style={{ color: '#FFF', fontSize: 12, marginBottom: 4 }}>
+                                    By: {moderatorName} • {timestamp}
+                                  </Text>
+                                                                    {violations.length > 0 && (
+                                    <Text style={{ color: '#FFF', fontSize: 12, marginBottom: 4 }}>
+                                      Violations: {violations.map(v => v.label || v.id).join(', ')}
+                                    </Text>
+                                  )}
+                                  {customReason && (
+                                    <Text style={{ color: '#FFF', fontSize: 12, fontStyle: 'italic' }}>
+                                      Note: {customReason}
+                                    </Text>
+                                  )}
+                                </View>
+                              );
+                            } catch (e) {
+                              // Fallback for old format
+                              return <Text style={{ color: '#FFF' }}>Post blurred: {item.blur_reason}</Text>;
+                            }
+                          })()}
+                        </Text>
+                        <TouchableOpacity 
+                          onLongPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            // Show detailed moderation info
+                            Alert.alert(
+                              'Moderation Details',
+                              `This post was moderated for violations of the Terms of Service.\n\nModerator: ${(() => {
+                                try {
+                                  const reasonData = JSON.parse(item.blur_reason);
+                                  return reasonData.moderator_username || 'Moderator';
+                                } catch (e) {
+                                  return 'Moderator';
+                                }
+                              })()}\nDate: ${(() => {
+                                try {
+                                  const reasonData = JSON.parse(item.blur_reason);
+                                  return new Date(reasonData.timestamp).toLocaleString();
+                                } catch (e) {
+                                  return 'Unknown';
+                                }
+                              })()}\n\nViolations:\n${(() => {
+                                try {
+                                  const reasonData = JSON.parse(item.blur_reason);
+                                  return reasonData.violations.map(v => `• ${v.label}`).join('\n');
+                                } catch (e) {
+                                  return item.blur_reason;
+                                }
+                              })()}`,
+                              [{ text: 'OK', style: 'default' }]
+                            );
+                          }}
+                          delayLongPress={500}
+                        >
+                          <Text style={styles.tapToRevealText}>Tap to reveal • Long press for details</Text>
+                        </TouchableOpacity>
                       </View>
                     ) : (
                       <View style={styles.communityBlurOverlay}>
@@ -725,17 +881,12 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                 ) : (
                     <>
                       {item.title && <Text style={[dynamicStyles.title, isRedactedMode && styles.greyedOutText]}>{item.title}</Text>}
-                      {isExpanded ? (
-                        <RenderHtml
-                          contentWidth={width - (images.length > 0 ? 122 : 30)}
-                          source={{ html: markdownToHtml(item.text) }}
-                          tagsStyles={tagsStyles}
+                      <HashtagText 
+                          text={item.text}
+                          onHashtagPress={(tag) => onFilterTag?.(tag) || router.push(`/hashtag/${tag}`)}
+                          textStyle={[dynamicStyles.bodyText, isRedactedMode && styles.greyedOutText]}
+                          users={[item.user, { id: 'towny-ai', username: 'towny' }, { id: 23, username: 'townwall' }]} // Include all relevant users
                         />
-                      ) : (
-                        <Text style={[dynamicStyles.bodyText, isRedactedMode && styles.greyedOutText]} numberOfLines={4}>
-                          {item.text?.replace(/<\/p>|<div>|<\/div>|<br\s*\/?>/gi, '\n').replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1').replace(/__(.+?)__/g, '$1').trim()}
-                        </Text>
-                      )}
                       {item.poll_id && <PollComponent pollId={item.poll_id} />}
                     </>
 
@@ -878,20 +1029,27 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                               <User size={12} color={theme.colors.textSecondary} />
                             </View>
                           ) : (
-                            c.user?.avatar_url ? (
-                              <Image source={{ uri: c.user.avatar_url }} style={styles.miniAvatar} />
-                            ) : (
-                              <Text style={styles.miniEmojiAvatar}>{c.user?.emoji_icon || "👤"}</Text>
-                            )
+                            (() => {
+                              const showcase = commentShowcaseInfo[c.id];
+                              const avatarUrl = showcase?.avatar_url || c.user?.avatar_url;
+                              return avatarUrl ? (
+                                <Image source={{ uri: avatarUrl }} style={styles.miniAvatar} />
+                              ) : (
+                                <Text style={styles.miniEmojiAvatar}>{c.user?.emoji_icon || "👤"}</Text>
+                              );
+                            })()
                           )}
                         </TouchableOpacity>
                         <View style={styles.commentContent}>
                           <View style={[styles.commentBubble, { backgroundColor: theme.colors.surface }]}>
                             <View style={styles.commentUserRow}>
                               <Text style={dynamicStyles.commentUser}>
-                                {c.is_anonymous ? (c.nickname || "Anonymous") : c.user?.username}
+                                {c.is_anonymous ? (c.nickname || "Anonymous") : (() => {
+                                  const showcase = commentShowcaseInfo[c.id];
+                                  return showcase?.name || c.user?.username;
+                                })()}
                               </Text>
-                              {!c.is_anonymous && c.user?.is_admin && (
+                              {!c.is_anonymous && c.user?.is_admin && c.posted_as_identity === 'personal' && (
                                 <View style={[styles.roleBadgeSmall, styles.adminBadge]}>
                                   <Text style={styles.roleBadgeTextSmall}>Admin</Text>
                                 </View>
@@ -906,18 +1064,22 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                                   <Text style={styles.roleBadgeTextSmall}>Councillor</Text>
                                 </View>
                               )}
-                              {!c.is_anonymous && (c.user?.account_type === 'business' || c.user?.account_type === 'both') && c.user?.business_showcase_id && (
-                                <View style={[styles.roleBadgeSmall, styles.businessBadge]}>
-                                  <Text style={styles.roleBadgeTextSmall}>Business</Text>
-                                </View>
-                              )}
-                              {!c.is_anonymous && (c.user?.account_type === 'talent' || c.user?.account_type === 'both') && c.user?.talent_showcase_id && (
-                                <View style={[styles.roleBadgeSmall, styles.talentBadge]}>
-                                  <Text style={styles.roleBadgeTextSmall}>Talent</Text>
-                                </View>
-                              )}
+                              {(() => {
+                                const cid = c.posted_as_identity;
+                                if (cid === 'business' && c.user?.business_showcase_id) return (
+                                  <View style={[styles.roleBadgeSmall, styles.businessBadge]}>
+                                    <Text style={styles.roleBadgeTextSmall}>Business</Text>
+                                  </View>
+                                );
+                                if (cid === 'talent' && c.user?.talent_showcase_id) return (
+                                  <View style={[styles.roleBadgeSmall, styles.talentBadge]}>
+                                    <Text style={styles.roleBadgeTextSmall}>Talent</Text>
+                                  </View>
+                                );
+                                return null;
+                              })()}
                             </View>
-                            {c.text ? <Text style={dynamicStyles.commentText}>{c.text}</Text> : null}
+                            {c.text ? <HashtagText text={c.text} onHashtagPress={(tag) => router.push(`/hashtag/${tag}`)} textStyle={dynamicStyles.commentText} users={[c.user, { id: 'towny-ai', username: 'towny' }, { id: 23, username: 'townwall' }]} /> : null}
                             {c.gif_url && (
                               <Image 
                                 source={{ uri: c.gif_url }} 
@@ -951,6 +1113,23 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                                 <MessageSquare size={14} color={theme.colors.textSecondary} />
                                 <Text style={[styles.commentActionText, { color: theme.colors.textSecondary }]}>Reply</Text>
                               </TouchableOpacity>
+                              {(c.user_id === currentUser?.id || isModOrAdmin) && (
+                                <TouchableOpacity 
+                                  style={styles.commentActionBtn}
+                                  onPress={() => {
+                                    Alert.alert(
+                                      'Delete Comment',
+                                      'Are you sure you want to delete this comment?',
+                                      [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { text: 'Delete', style: 'destructive', onPress: () => handleDeleteComment(c.id) }
+                                      ]
+                                    );
+                                  }}
+                                >
+                                  <Trash2 size={14} color={theme.colors.error} />
+                                </TouchableOpacity>
+                              )}
                               <Text style={[styles.commentTime, { color: theme.colors.textSecondary, marginLeft: 'auto' }]}>{getTimeAgo(new Date(c.created_at))}</Text>
                             </View>
                           </View>
@@ -1002,7 +1181,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                                     {reply.is_anonymous ? (reply.nickname || "Anonymous") : reply.user?.username}
                                   </Text>
                                 </View>
-                                {reply.text ? <Text style={[dynamicStyles.commentText, { fontSize: 13 }]}>{reply.text}</Text> : null}
+                                {reply.text ? <HashtagText text={reply.text} onHashtagPress={(tag) => router.push(`/hashtag/${tag}`)} textStyle={[dynamicStyles.commentText, { fontSize: 13 }]} /> : null}
                                 {reply.gif_url && (
                                   <Image 
                                     source={{ uri: reply.gif_url }} 
@@ -1026,6 +1205,23 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                                       </Text>
                                     )}
                                   </TouchableOpacity>
+                                  {(reply.user_id === currentUser?.id || isModOrAdmin) && (
+                                    <TouchableOpacity 
+                                      style={styles.commentActionBtn}
+                                      onPress={() => {
+                                        Alert.alert(
+                                          'Delete Comment',
+                                          'Are you sure you want to delete this comment?',
+                                          [
+                                            { text: 'Cancel', style: 'cancel' },
+                                            { text: 'Delete', style: 'destructive', onPress: () => handleDeleteComment(reply.id) }
+                                          ]
+                                        );
+                                      }}
+                                    >
+                                      <Trash2 size={12} color={theme.colors.error} />
+                                    </TouchableOpacity>
+                                  )}
                                   <Text style={[styles.commentTime, { color: theme.colors.textSecondary, marginLeft: 'auto', fontSize: 10 }]}>{getTimeAgo(new Date(reply.created_at))}</Text>
                                 </View>
                               </View>
@@ -1209,7 +1405,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                   </TouchableOpacity>
                   
                   {isModOrAdmin && (
-                    <TouchableOpacity style={styles.modMenuItem} onPress={() => { setShowModMenu(false); setShowBlurModal(true); }}>
+                    <TouchableOpacity style={styles.modMenuItem} onPress={() => { setShowModMenu(false); setShowModerationModal(true); }}>
                       <EyeOff size={20} color="#FBBF24" />
                       <Text style={[styles.modMenuText, { color: '#FBBF24' }]}>Blur Post</Text>
                     </TouchableOpacity>
@@ -1243,37 +1439,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
             </TouchableOpacity>
           </Modal>
   
-          <Modal visible={showBlurModal} transparent animationType="slide">
-            <View style={styles.modalOverlay}>
-              <View style={[styles.blurModalContent, { backgroundColor: theme.colors.background }]}>
-                <Text style={[styles.modMenuTitle, { color: theme.colors.text }]}>Blur Post</Text>
-                <Text style={[styles.blurModalSubtitle, { color: theme.colors.textSecondary }]}>Enter a reason that will be shown to users</Text>
-                
-                <TextInput
-                  style={[styles.blurReasonInput, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
-                  placeholder="Reason for blurring..."
-                  placeholderTextColor={theme.colors.textSecondary}
-                  value={blurReasonInput}
-                  onChangeText={setBlurReasonInput}
-                  multiline
-                />
-                
-                <View style={styles.blurModalButtons}>
-                  <TouchableOpacity style={[styles.blurModalCancel, { backgroundColor: theme.colors.surface }]} onPress={() => { setShowBlurModal(false); setBlurReasonInput(""); }}>
-                    <Text style={[styles.blurModalCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.blurModalConfirm, !blurReasonInput.trim() && { opacity: 0.5 }]} 
-                    onPress={handleBlurPost}
-                    disabled={!blurReasonInput.trim()}
-                  >
-                    <Text style={[styles.blurModalConfirmText, { color: isLight ? '#FFF' : '#000' }]}>Blur Post</Text>
-                  </TouchableOpacity>
-                </View>
-                </View>
-              </View>
-            </Modal>
-
+          
             <Modal visible={showBlockModal} transparent animationType="slide">
               <View style={styles.modalOverlay}>
                 <View style={[styles.blurModalContent, { backgroundColor: theme.colors.background }]}>
@@ -1416,7 +1582,7 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
                 </TouchableOpacity>
                 
                 {isModOrAdmin && (
-                  <TouchableOpacity style={styles.modMenuItem} onPress={() => { setShowModMenu(false); setShowBlurModal(true); }}>
+                  <TouchableOpacity style={styles.modMenuItem} onPress={() => { setShowModMenu(false); setShowModerationModal(true); }}>
                     <EyeOff size={20} color="#FBBF24" />
                     <Text style={[styles.modMenuText, { color: '#FBBF24' }]}>Blur Post</Text>
                   </TouchableOpacity>
@@ -1436,36 +1602,18 @@ export default function PostItem({ item, deviceId, onReaction, onComment, onDele
           </TouchableOpacity>
         </Modal>
 
-        <Modal visible={showBlurModal} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.blurModalContent}>
-              <Text style={styles.modMenuTitle}>Blur Post</Text>
-              <Text style={styles.blurModalSubtitle}>Enter a reason that will be shown to users</Text>
-              
-              <TextInput
-                style={styles.blurReasonInput}
-                placeholder="Reason for blurring..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={blurReasonInput}
-                onChangeText={setBlurReasonInput}
-                multiline
-              />
-              
-              <View style={styles.blurModalButtons}>
-                <TouchableOpacity style={styles.blurModalCancel} onPress={() => { setShowBlurModal(false); setBlurReasonInput(""); }}>
-                  <Text style={styles.blurModalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.blurModalConfirm, !blurReasonInput.trim() && { opacity: 0.5 }]} 
-                  onPress={handleBlurPost}
-                  disabled={!blurReasonInput.trim()}
-                >
-                  <Text style={styles.blurModalConfirmText}>Blur Post</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {/* Moderation Modal */}
+      <ModerationModal
+        visible={showModerationModal}
+        onClose={() => setShowModerationModal(false)}
+        itemType="post"
+        itemId={item.id}
+        itemName={item.title || "Post"}
+        onActionComplete={() => {
+          setShowModerationModal(false);
+          // The parent component will handle refresh via onModAction
+        }}
+      />
       </View>
     );
   }

@@ -32,6 +32,7 @@ import { crossAlert } from "@/utils/alert";
 import { toast } from 'sonner-native';
 import { useAuthStore } from '@/utils/auth';
 import { BadgeCheck } from 'lucide-react-native';
+import ModerationModal from '@/components/ModerationModal';
 
 const DELIVERY_PLATFORMS = [
   { id: 'amazon', name: 'Amazon', icon: ShoppingBag },
@@ -50,9 +51,11 @@ export default function LocalBusinesses() {
   const [businesses, setBusinesses] = useState([]);
   const [myShowcases, setMyShowcases] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showModal, setShowModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showLinksModal, setShowLinksModal] = useState(false);
+    const [showModerationModal, setShowModerationModal] = useState(false);
     const [selectedBusiness, setSelectedBusiness] = useState(null);
     const [editForm, setEditForm] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,9 +99,18 @@ export default function LocalBusinesses() {
       links: []
     });
 
+  const checkAdmin = async () => {
+    const user = await getStoredUser();
+    if (user) {
+      const { data } = await supabase.from('rusers').select('is_admin, is_moderator').eq('id', user.id).single();
+      setIsAdmin(!!data?.is_admin || !!data?.is_moderator);
+    }
+  };
+
   useEffect(() => {
     initUser();
     fetchBusinesses();
+    checkAdmin();
 
     const channel = supabase
       .channel('rbusinesses_changes')
@@ -868,6 +880,13 @@ if (user?.id) {
               setSelectedBusiness(item);
               setShowLinksModal(true);
             }}
+            onLongPress={() => {
+              if (isAdmin) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setSelectedBusiness(item);
+                setShowModerationModal(true);
+              }
+            }}
             style={styles.businessCard}
           >
             <View style={styles.cardImageContainer}>
@@ -1479,6 +1498,19 @@ if (user?.id) {
           </View>
         </BlurView>
       </Modal>
+
+      {/* Moderation Modal */}
+      <ModerationModal
+        visible={showModerationModal}
+        onClose={() => setShowModerationModal(false)}
+        itemType="business"
+        itemId={selectedBusiness?.id}
+        itemName={selectedBusiness?.name}
+        onActionComplete={() => {
+          setShowModerationModal(false);
+          fetchBusinesses(); // Refresh the list
+        }}
+      />
     </View>
   );
 }

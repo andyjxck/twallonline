@@ -23,6 +23,7 @@ import { crossAlert } from "@/utils/alert";
 import { toast } from 'sonner-native';
 import { useAuthStore } from '@/utils/auth';
 import { BadgeCheck } from 'lucide-react-native';
+import ModerationModal from '@/components/ModerationModal';
 
 export default function LocalTalent() {
   const { theme, isHippie, isLight } = useTheme();
@@ -33,9 +34,11 @@ export default function LocalTalent() {
   const [talents, setTalents] = useState([]);
   const [myShowcases, setMyShowcases] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showModal, setShowModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showLinksModal, setShowLinksModal] = useState(false);
+    const [showModerationModal, setShowModerationModal] = useState(false);
     const [selectedTalent, setSelectedTalent] = useState(null);
     const [editForm, setEditForm] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,9 +86,18 @@ export default function LocalTalent() {
         links: []
       });
 
+  const checkAdmin = async () => {
+    const user = await getStoredUser();
+    if (user) {
+      const { data } = await supabase.from('rusers').select('is_admin, is_moderator').eq('id', user.id).single();
+      setIsAdmin(!!data?.is_admin || !!data?.is_moderator);
+    }
+  };
+
   useEffect(() => {
     initUser();
     fetchTalents();
+    checkAdmin();
 
     const channel = supabase
       .channel('rtalent_changes')
@@ -684,6 +696,13 @@ const { error } = await supabase
             setSelectedTalent(item);
             setShowLinksModal(true);
           }}
+          onLongPress={() => {
+            if (isAdmin) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setSelectedTalent(item);
+              setShowModerationModal(true);
+            }
+          }}
           style={styles.talentCard}
         >
         <View style={styles.cardImageContainer}>
@@ -1110,6 +1129,19 @@ const { error } = await supabase
           </View>
         </BlurView>
       </Modal>
+
+      {/* Moderation Modal */}
+      <ModerationModal
+        visible={showModerationModal}
+        onClose={() => setShowModerationModal(false)}
+        itemType="talent"
+        itemId={selectedTalent?.id}
+        itemName={selectedTalent?.name}
+        onActionComplete={() => {
+          setShowModerationModal(false);
+          fetchTalents(); // Refresh the list
+        }}
+      />
     </View>
   );
 }

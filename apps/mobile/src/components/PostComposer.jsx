@@ -13,7 +13,7 @@ import {
   Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera, MapPin, User, ChevronDown, Bold, Italic, Underline, Star, Briefcase, Music } from "lucide-react-native";
+import { X, ChevronRight, Image as ImageIcon, Shield, BarChart2, Plus, ChevronLeft, WifiOff, MessageCircle, Users, Layout, Check, Camera, MapPin, User, ChevronDown, Bold, Italic, Underline, Star, Briefcase, Music, Sparkles } from "lucide-react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -30,9 +30,11 @@ import SpotifyEmbed, { isValidSpotifyUrl } from "./SpotifyEmbed";
 import { RichTextEditor } from "../components/RichTextEditor";
 import HippieBackground from "../components/HippieBackground";
 import { offlineStorage, checkNetworkStatus } from "../utils/offline";
-import { sendNewPostNotification, sendFollowerPostNotification } from "../utils/notifications";
+import { sendNewPostNotification, sendFollowerPostNotification, sendMentionNotification } from "../utils/notifications";
 import { useLocationStore } from "../utils/locationStore";
 import { fetchZonesForCity } from "../utils/location";
+import { mentionService } from "../utils/mentionService";
+import townyAI from "../utils/townyAI";
 
 const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", "🐵", "🦄", "🐲", "🤖", "👻", "👾", "👽", "💩"];
 
@@ -74,7 +76,7 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
   const [postingAs, setPostingAs] = useState('personal');
   const [showcaseInfo, setShowcaseInfo] = useState(null);
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 });
-
+  
   const { city_id, zone_id, feedView } = useLocationStore();
 
   const applyFormat = (formatType) => {
@@ -206,9 +208,10 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
 
   const pickMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, quality: 0.8 });
-    if (!result.canceled) setMedia([...media, ...result.assets]);
+    if (!result.canceled) setMedia([...media, ...result.assets.map(asset => ({ uri: asset.uri, fromRemote: true, type: asset.mediaType || 'image' }))]);
   };
 
+  
   const handlePost = async () => {
     if (!text?.trim()) { toast.error("Please write something before posting"); return; }
     if (!selectedTag) { toast.error("Please select a tag before posting"); return; }
@@ -290,12 +293,44 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
       if (postId) await supabase.from('rposts').update(dbPostData).eq('id', postId);
       else {
         const { data: newPost } = await supabase.from('rposts').insert(dbPostData).select('id').single();
+        
+        // Process hashtags for new post
+        if (newPost && moderation.status === 'approved') {
+          const { hashtagService } = await import('../utils/hashtagService');
+          await hashtagService.processHashtags(newPost.id, 'post', text.trim());
+          
+          // Process mentions for new post
+          const mentions = mentionService.extractUsernames(text.trim());
+          if (mentions.length > 0) {
+            await mentionService.createMentions(newPost.id, mentions, user.id);
+            
+            // Check if @towny was mentioned
+            console.log('Checking for @towny mention in:', text.trim());
+            if (townyAI.isTownyMentioned(text.trim())) {
+              console.log('@towny detected, generating response...');
+              const moderationResult = await townyAI.moderatePost(text.trim(), newPost.id, user.id);
+              console.log('Moderation result:', moderationResult);
+            } else {
+              console.log('No @towny mention found');
+            }
+            
+            // Send mention notifications
+            const mentionedUsers = await mentionService.getMentionedUsers(text.trim());
+            for (const mentionedUser of mentionedUsers) {
+              if (mentionedUser.id !== user.id) {
+                await sendMentionNotification({
+                  mentioningUserId: user.id,
+                  mentioningUsername: user.username,
+                  mentionedUserId: mentionedUser.id,
+                  postId: newPost.id,
+                  contentType: 'post'
+                });
+              }
+            }
+          }
+        }
+        
         if (newPost && !isAnonymous && moderation.status === 'approved') {
-          await sendNewPostNotification({
-            posterId: user.id,
-            posterUsername: user.username,
-            postId: newPost.id
-          });
           if (user.account_type && user.account_type !== 'personal' && user.active_identity !== 'personal') {
             sendFollowerPostNotification({
               posterId: user.id,
@@ -920,7 +955,8 @@ export function PostComposer({ postId, onClose, onSuccess, isInline = false }) {
           </View>
         </View>
       </Modal>
-    </View>
+
+          </View>
   );
 
   const wrapper = (
@@ -1218,5 +1254,13 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  editMedia: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+    borderRadius: 12,
+    padding: 4,
   },
 });

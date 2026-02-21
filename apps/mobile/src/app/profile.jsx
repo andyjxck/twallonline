@@ -1238,14 +1238,14 @@ const EMOJIS = ["👤", "🐱", "🐶", "🦊", "🦁", "🐨", "🐸", "🐷", 
             <View style={styles.tabContent}>
               {activeTab === "posts" && (
                 userPosts.length > 0 ? (
-                  userPosts.map(post => <PostItem key={post.id} item={post} deviceId={deviceId} onReaction={handleReaction} user={currentUser} onComment={loadData} onModAction={handleModAction} />)
+                  userPosts.map(post => <PostItem key={post.id} item={post} deviceId={deviceId} onReaction={handleReaction} user={currentUser} onComment={loadData} onModAction={handleModAction} onEdit={(p) => router.push(`/post?id=${p.id}`)} />)
                 ) : (
                   <View style={styles.emptyContainer}><Text style={styles.emptyText}>No posts yet</Text></View>
                 )
               )}
               {activeTab === "starred" && (
                 savedPosts.length > 0 ? (
-                  savedPosts.map(post => <PostItem key={post.id} item={post} deviceId={deviceId} onReaction={handleReaction} user={currentUser} onComment={loadData} onModAction={handleModAction} />)
+                  savedPosts.map(post => <PostItem key={post.id} item={post} deviceId={deviceId} onReaction={handleReaction} user={currentUser} onComment={loadData} onModAction={handleModAction} onEdit={(p) => router.push(`/post?id=${p.id}`)} />)
                 ) : (
                   <View style={styles.emptyContainer}><Text style={styles.emptyText}>No starred posts</Text></View>
                 )

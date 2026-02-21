@@ -273,11 +273,6 @@ export default function PostScreen() {
         else {
           const { data: newPost } = await supabase.from('rposts').insert(dbPostData).select('id').single();
           if (newPost && !isAnonymous && moderation.status === 'approved') {
-            await sendNewPostNotification({
-              posterId: user.id,
-              posterUsername: user.username,
-              postId: newPost.id
-            });
             if (user.account_type && user.account_type !== 'personal' && user.active_identity !== 'personal') {
               sendFollowerPostNotification({
                 posterId: user.id,

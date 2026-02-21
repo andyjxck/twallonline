@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { crossAlert } from '../utils/alert';
 import { toast } from 'sonner-native';
+import ModerationModal from './ModerationModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -67,6 +68,7 @@ import AdBanner from "./AdBanner";
 import PostItem from "./PostItem";
 import StoriesBar from "./StoriesBar";
 import BackgroundPattern from "./BackgroundPattern";
+import TrendingHashtagsTicker from "./TrendingHashtagsTicker";
 import { subscribeToUnreadCount, sendNotification, sendReactionNotification } from "../utils/notifications";
 import { offlineStorage, syncService, subscribeToNetworkChanges, checkNetworkStatus } from "../utils/offline";
 import { useLocationStore } from "../utils/locationStore";
@@ -98,6 +100,14 @@ export default function UniversalFeed() {
   const [showNotifications, setShowNotifications] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [blockedUserIds, setBlockedUserIds] = useState([]);
+    const [showModerationModal, setShowModerationModal] = useState(false);
+    const [selectedPostForModeration, setSelectedPostForModeration] = useState(null);
+    const [selectedStoryForModeration, setSelectedStoryForModeration] = useState(null);
+
+    // Debug: Log modal state changes
+    useEffect(() => {
+      console.log('showModerationModal:', showModerationModal);
+    }, [showModerationModal]);
     const shareRef = useRef();
   const reactionLockRef = useRef(new Set());
   const [isOnline, setIsOnline] = useState(true);
@@ -335,8 +345,11 @@ return () => {
         await supabase.from('rposts').update({ comments_disabled: !post?.comments_disabled }).eq('id', postId);
         toast.success(post?.comments_disabled ? "Comments enabled" : "Comments disabled");
       } else if (action === 'blur') {
-        await supabase.from('rposts').update({ is_blurred: true, blur_reason: reason }).eq('id', postId);
-        toast.success("Post blurred");
+        // Show ModerationModal for blur action
+        console.log('Blur action triggered, showing moderation modal');
+        setSelectedPostForModeration(post);
+        setShowModerationModal(true);
+        return;
       } else if (action === 'unblur') {
         await supabase.from('rposts').update({ is_blurred: false, blur_reason: null }).eq('id', postId);
         toast.success("Blur removed");
@@ -425,7 +438,21 @@ if (isOnline) syncPendingPosts();
 
     const [logoClicks, setLogoClicks] = useState(0);
 
-    const handleLogoClick = () => {
+    const handleModerationRequest = (moderationData) => {
+    console.log('=== MODERATION REQUEST RECEIVED ===');
+    console.log('moderationData:', moderationData);
+    if (moderationData.type === 'story') {
+      console.log('SETTING STORY MODERATION');
+      setSelectedStoryForModeration(moderationData);
+      setShowModerationModal(true);
+    } else {
+      console.log('SETTING POST MODERATION');
+      setSelectedPostForModeration(moderationData);
+      setShowModerationModal(true);
+    }
+  };
+
+  const handleLogoClick = () => {
         const newClicks = logoClicks + 1;
         setLogoClicks(newClicks);
         if (newClicks >= 15) {
@@ -519,7 +546,8 @@ if (isOnline) syncPendingPosts();
             data={postsWithAds}
           ListHeaderComponent={
             <View style={{ paddingTop: 12 }}>
-              {(Platform.OS !== 'web' || Dimensions.get('window').width < 768) && <StoriesBar />}
+              <TrendingHashtagsTicker posts={posts} />
+              {(Platform.OS !== 'web' || Dimensions.get('window').width < 768) && <StoriesBar onModerationRequest={handleModerationRequest} />}
               {Platform.OS === 'web' ? <AdBanner width={Dimensions.get('window').width < 768 ? 320 : 728} height={Dimensions.get('window').width < 768 ? 50 : 90} /> : <BannerAd />}
               {isComposerExpanded ? (
                   <View style={[styles.inlineComposerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -903,6 +931,25 @@ if (isOnline) syncPendingPosts();
             </View>
           )}
         </AnimatePresence>
+
+      {/* Moderation Modal */}
+      <ModerationModal
+        visible={showModerationModal}
+        onClose={() => {
+          setShowModerationModal(false);
+          setSelectedPostForModeration(null);
+          setSelectedStoryForModeration(null);
+        }}
+        itemType={selectedStoryForModeration ? 'story' : 'post'}
+        itemId={selectedStoryForModeration?.id || selectedPostForModeration?.id}
+        itemName={selectedStoryForModeration?.name || selectedPostForModeration?.title || "Post"}
+        onActionComplete={() => {
+          setShowModerationModal(false);
+          setSelectedPostForModeration(null);
+          setSelectedStoryForModeration(null);
+          fetchPosts(true); // Refresh the list
+        }}
+      />
       </View>
     );
 }

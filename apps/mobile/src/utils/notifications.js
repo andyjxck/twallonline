@@ -413,6 +413,29 @@ export const sendNewPostNotification = async ({ posterId, posterUsername, postId
   }
 };
 
+export const sendMentionNotification = async ({ mentioningUserId, mentioningUsername, mentionedUserId, postId, commentId, contentType }) => {
+  try {
+    // Don't send notification if user mentions themselves
+    if (mentioningUserId === mentionedUserId) return { success: true, skipped: true };
+
+    const content = contentType === 'post' ? 'post' : 'comment';
+    const link = contentType === 'post' ? `/post/${postId}` : `/post/${postId}?comment=${commentId}`;
+
+    await sendNotification({
+      userId: mentionedUserId,
+      title: `You were mentioned!`,
+      message: `@${mentioningUsername} mentioned you in their ${content}`,
+      type: 'mention',
+      link: link
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending mention notification:', error);
+    return { success: false, error };
+  }
+};
+
 export const sendFollowerPostNotification = async ({ posterId, posterUsername, postId, postTitle }) => {
   try {
     const { data: followers } = await supabase

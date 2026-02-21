@@ -23,7 +23,7 @@ const MIN_DURATION = 3;
 const MAX_DURATION = 15;
 const MAX_CAPTION_LENGTH = 150;
 
-export default function StoriesBar({ vertical = false, reversed = false }) {
+export default function StoriesBar({ vertical = false, reversed = false, onModerationRequest = null }) {
   const { theme, isLight } = useTheme();
   const user = useAuthStore(state => state.auth);
   const { city_id, zone_id, feedView } = useLocationStore();
@@ -213,7 +213,7 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
       const { data: { publicUrl } } = supabase.storage.from('stories').getPublicUrl(fileName);
 
-      const { error } = await supabase.from('rstories').insert({
+      const { data: newStory } = await supabase.from('rstories').insert({
         user_id: user.id,
         image_url: publicUrl,
         caption: captionInput.trim() || null,
@@ -221,9 +221,13 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
         duration: storyDuration,
         city_id: city_id !== 349 ? city_id : null,
         zone_id: zone_id || null,
-      });
+      }).select('id').single();
 
-      if (error) throw error;
+      // Process hashtags for new story
+      if (newStory && captionInput.trim()) {
+        const { hashtagService } = await import('../utils/hashtagService');
+        await hashtagService.processHashtags(newStory.id, 'story', captionInput.trim());
+      }
 
       toast.success('Story posted');
       setCaptionInput('');
@@ -297,8 +301,12 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
   };
 
   const unblurStory = async (storyId) => {
+    console.log('=== UNBLUR STORY CALLED ===');
+    console.log('storyId:', storyId);
     try {
+      console.log('UPDATING DATABASE...');
       await supabase.from('rstories').update({ is_blurred: false, blur_reason: null }).eq('id', storyId);
+      console.log('DATABASE UPDATED SUCCESSFULLY');
       try {
         await supabase.from('rmoderation_logs').insert({
           moderator_id: user?.id,
@@ -685,12 +693,26 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
               {/* Blur overlay */}
               {storyIsBlurred && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }]}>
+                  <TouchableOpacity 
+                    style={{ justifyContent: 'center', alignItems: 'center', marginTop: -100 }}
+                    onPress={() => setShowStoryActions(true)}
+                    activeOpacity={1}
+                  >
                   <AlertTriangle size={40} color="#F59E0B" />
                   <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 12 }}>Content Warning</Text>
                   <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 40 }}>
-                    {currentViewerStory.blur_reason || 'This story has been flagged by a moderator.'}
+                    {(() => {
+                      try {
+                        const reasonData = JSON.parse(currentViewerStory.blur_reason);
+                        const violations = reasonData.violations || [];
+                        return violations.length > 0 ? violations[0].label : 'This story has been flagged by a moderator.';
+                      } catch (e) {
+                        return 'This story has been flagged by a moderator.';
+                      }
+                    })()}
                   </Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -746,10 +768,14 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
               {/* Unblur button for mods */}
               {storyIsBlurred && isModerator && (
-                <View style={{ position: 'absolute', bottom: '40%', alignSelf: 'center' }}>
+                <View style={{ position: 'absolute', bottom: '40%', alignSelf: 'center', zIndex: 30 }}>
                   <TouchableOpacity 
-                    onPress={() => unblurStory(currentViewerStory.id)} 
-                    style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8 }}
+                    onPress={() => { 
+                      console.log('=== OVERLAY REMOVE BLUR CLICKED ===');
+                      console.log('currentViewerStory.id:', currentViewerStory?.id);
+                      unblurStory(currentViewerStory?.id);
+                    }} 
+                    style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, zIndex: 30 }}
                   >
                     <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>Remove Blur (Mod)</Text>
                   </TouchableOpacity>
@@ -880,50 +906,76 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                       <>
                         {!storyIsBlurred ? (
                           <TouchableOpacity style={styles.actionItem} onPress={() => { 
-                              console.log('BLUR BUTTON CLICKED - currentViewerStory:', currentViewerStory);
-                              setShowStoryActions(false);
-                              setPendingModeration(currentViewerStory);
-                              console.log('PENDING MODERATION SET');
-                              setViewerVisible(false);
-                              console.log('VIEWER VISIBLE SET TO FALSE');
-                            }}>
-                            <EyeOff size={20} color="#F59E0B" />
-                            <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY NOW</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
-                            <EyeOff size={20} color="#10B981" />
-                            <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
-                          </TouchableOpacity>
+                                  console.log('=== BLUR BUTTON PRESSED ===');
+                                  console.log('onModerationRequest:', onModerationRequest);
+                                  console.log('currentViewerStory:', currentViewerStory);
+                                  // Close stories and request moderation modal
+                                  closeViewer(); // Close everything properly
+                                  if (onModerationRequest) {
+                                    console.log('CALLING onModerationRequest');
+                                    onModerationRequest({
+                                      type: 'story',
+                                      id: currentViewerStory?.id,
+                                      name: `Story by ${currentViewerStory?.user?.username || 'User'}`
+                                    });
+                                  } else {
+                                    console.log('NO onModerationRequest CALLBACK');
+                                  }
+                                }}>
+                                <EyeOff size={20} color="#F59E0B" />
+                                <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY 2025</Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <TouchableOpacity style={styles.actionItem} onPress={() => { 
+                                  console.log('=== REMOVE BLUR CLICKED ===');
+                                  console.log('currentViewerStory?.id:', currentViewerStory?.id);
+                                  unblurStory(currentViewerStory?.id);
+                                }}>
+                                <EyeOff size={20} color="#10B981" />
+                                <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
+                              </TouchableOpacity>
+                            )}
+                            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
+                              <Trash2 size={20} color={theme.colors.error} />
+                              <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story (Mod)</Text>
+                            </TouchableOpacity>
+                          </>
                         )}
-                        <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
-                          <Trash2 size={20} color={theme.colors.error} />
-                          <Text style={[styles.actionItemText, { color: theme.colors.error }]}>Delete Story (Mod)</Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                    {isModerator && isOwnStory && (
-                      <>
-                        {!storyIsBlurred ? (
-                          <TouchableOpacity style={styles.actionItem} onPress={() => { 
-                              console.log('BLUR BUTTON CLICKED - currentViewerStory:', currentViewerStory);
-                              setShowStoryActions(false);
-                              setPendingModeration(currentViewerStory);
-                              console.log('PENDING MODERATION SET');
-                              setViewerVisible(false);
-                              console.log('VIEWER VISIBLE SET TO FALSE');
-                            }}>
-                            <EyeOff size={20} color="#F59E0B" />
-                            <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY NOW</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
-                            <EyeOff size={20} color="#10B981" />
-                            <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
-                          </TouchableOpacity>
+                        {isModerator && isOwnStory && (
+                          <>
+                            {!storyIsBlurred ? (
+                              <TouchableOpacity style={styles.actionItem} onPress={() => { 
+                                  console.log('=== BLUR BUTTON PRESSED ===');
+                                  console.log('onModerationRequest:', onModerationRequest);
+                                  console.log('currentViewerStory:', currentViewerStory);
+                                  // Close stories and request moderation modal
+                                  closeViewer(); // Close everything properly
+                                  if (onModerationRequest) {
+                                    console.log('CALLING onModerationRequest');
+                                    onModerationRequest({
+                                      type: 'story',
+                                      id: currentViewerStory?.id,
+                                      name: `Story by ${currentViewerStory?.user?.username || 'User'}`
+                                    });
+                                  } else {
+                                    console.log('NO onModerationRequest CALLBACK');
+                                  }
+                                }}>
+                                <EyeOff size={20} color="#F59E0B" />
+                                <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY 2025</Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <TouchableOpacity style={styles.actionItem} onPress={() => { 
+                                  console.log('=== REMOVE BLUR CLICKED ===');
+                                  console.log('currentViewerStory?.id:', currentViewerStory?.id);
+                                  unblurStory(currentViewerStory?.id);
+                                }}>
+                                <EyeOff size={20} color="#10B981" />
+                                <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
+                              </TouchableOpacity>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
                     <TouchableOpacity style={[styles.actionItem, { borderTopWidth: 1, borderTopColor: theme.colors.border }]} onPress={() => { setShowStoryActions(false); startProgress(getStoryDuration(currentViewerStory)); }}>
                       <Text style={[styles.actionItemText, { color: theme.colors.textSecondary }]}>Cancel</Text>
                     </TouchableOpacity>
@@ -1133,29 +1185,20 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                           const moderatorName = reasonData.moderator_username || 'Moderator';
                           const timestamp = new Date(reasonData.timestamp).toLocaleDateString();
                           
-                          return (
-                            <View>
-                              <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', marginBottom: 4 }}>
-                                STORY MODERATED
-                              </Text>
-                              <Text style={{ color: '#FFF', fontSize: 12, marginBottom: 4 }}>
-                                By: {moderatorName} • {timestamp}
-                              </Text>
-                              {violations.length > 0 && (
-                                <Text style={{ color: '#FFF', fontSize: 12, marginBottom: 4 }}>
-                                  Violations: {violations.map(v => v.label).join(', ')}
-                                </Text>
-                              )}
-                              {customReason && (
-                                <Text style={{ color: '#FFF', fontSize: 12, fontStyle: 'italic' }}>
-                                  Note: {customReason}
-                                </Text>
-                              )}
-                            </View>
-                          );
+                          let text = `STORY MODERATED\n\nBy: ${moderatorName} • ${timestamp}`;
+                          
+                          if (violations.length > 0) {
+                            text += `\nViolations: ${violations.map(v => v.label).join(', ')}`;
+                          }
+                          
+                          if (customReason) {
+                            text += `\nNote: ${customReason}`;
+                          }
+                          
+                          return text;
                         } catch (e) {
                           // Fallback for old format
-                          return <Text style={{ color: '#FFF' }}>Story blurred: {currentViewerStory.blur_reason}</Text>;
+                          return `Story blurred: ${currentViewerStory.blur_reason}`;
                         }
                       })()}
                     </Text>
@@ -1215,9 +1258,9 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
 
                 {/* Story actions overlay */}
                 {showStoryActions && (
-                  <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}>
-                    <TouchableOpacity activeOpacity={1} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(false); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
-                    <TouchableOpacity activeOpacity={1} style={[styles.actionSheet, { backgroundColor: theme.colors.surface }]}>
+                  <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', zIndex: 20 }]}>
+                    <TouchableOpacity activeOpacity={1} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(false); }} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20 }]} />
+                    <TouchableOpacity activeOpacity={1} style={[styles.actionSheet, { backgroundColor: theme.colors.surface, zIndex: 21 }]}>
                       <View style={[styles.actionSheet, { padding: 20 }]}>
                         {isOwnStory && (
                           <TouchableOpacity style={styles.actionItem} onPress={() => { setShowStoryActions(false); setShowDeleteConfirm(true); }}>
@@ -1229,20 +1272,31 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                           <>
                             {!storyIsBlurred ? (
                               <TouchableOpacity style={styles.actionItem} onPress={() => { 
-                                  console.log('BLUR BUTTON CLICKED - currentViewerStory:', currentViewerStory);
-                                  setShowStoryActions(false);
-                                  setPendingModeration(currentViewerStory);
-                                  console.log('PENDING MODERATION SET');
-                                  // Show modal immediately, then close viewer
-                                  setShowModerationModal(true);
-                                  setViewerVisible(false);
-                                  console.log('VIEWER VISIBLE SET TO FALSE');
+                                  console.log('=== BLUR BUTTON PRESSED ===');
+                                  console.log('onModerationRequest:', onModerationRequest);
+                                  console.log('currentViewerStory:', currentViewerStory);
+                                  // Close stories and request moderation modal
+                                  closeViewer(); // Close everything properly
+                                  if (onModerationRequest) {
+                                    console.log('CALLING onModerationRequest');
+                                    onModerationRequest({
+                                      type: 'story',
+                                      id: currentViewerStory?.id,
+                                      name: `Story by ${currentViewerStory?.user?.username || 'User'}`
+                                    });
+                                  } else {
+                                    console.log('NO onModerationRequest CALLBACK');
+                                  }
                                 }}>
                                 <EyeOff size={20} color="#F59E0B" />
-                                <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY NOW</Text>
+                                <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY 2025</Text>
                               </TouchableOpacity>
                             ) : (
-                              <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
+                              <TouchableOpacity style={styles.actionItem} onPress={() => { 
+                                  console.log('=== REMOVE BLUR CLICKED ===');
+                                  console.log('currentViewerStory?.id:', currentViewerStory?.id);
+                                  unblurStory(currentViewerStory?.id);
+                                }}>
                                 <EyeOff size={20} color="#10B981" />
                                 <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
                               </TouchableOpacity>
@@ -1257,20 +1311,31 @@ export default function StoriesBar({ vertical = false, reversed = false }) {
                           <>
                             {!storyIsBlurred ? (
                               <TouchableOpacity style={styles.actionItem} onPress={() => { 
-                                  console.log('BLUR BUTTON CLICKED - currentViewerStory:', currentViewerStory);
-                                  setShowStoryActions(false);
-                                  setPendingModeration(currentViewerStory);
-                                  console.log('PENDING MODERATION SET');
-                                  // Show modal immediately, then close viewer
-                                  setShowModerationModal(true);
-                                  setViewerVisible(false);
-                                  console.log('VIEWER VISIBLE SET TO FALSE');
+                                  console.log('=== BLUR BUTTON PRESSED ===');
+                                  console.log('onModerationRequest:', onModerationRequest);
+                                  console.log('currentViewerStory:', currentViewerStory);
+                                  // Close stories and request moderation modal
+                                  closeViewer(); // Close everything properly
+                                  if (onModerationRequest) {
+                                    console.log('CALLING onModerationRequest');
+                                    onModerationRequest({
+                                      type: 'story',
+                                      id: currentViewerStory?.id,
+                                      name: `Story by ${currentViewerStory?.user?.username || 'User'}`
+                                    });
+                                  } else {
+                                    console.log('NO onModerationRequest CALLBACK');
+                                  }
                                 }}>
                                 <EyeOff size={20} color="#F59E0B" />
-                                <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY NOW</Text>
+                                <Text style={[styles.actionItemText, { color: '#F59E0B' }]}>BLUR STORY 2025</Text>
                               </TouchableOpacity>
                             ) : (
-                              <TouchableOpacity style={styles.actionItem} onPress={() => unblurStory(currentViewerStory?.id)}>
+                              <TouchableOpacity style={styles.actionItem} onPress={() => { 
+                                  console.log('=== REMOVE BLUR CLICKED ===');
+                                  console.log('currentViewerStory?.id:', currentViewerStory?.id);
+                                  unblurStory(currentViewerStory?.id);
+                                }}>
                                 <EyeOff size={20} color="#10B981" />
                                 <Text style={[styles.actionItemText, { color: '#10B981' }]}>Remove Blur</Text>
                               </TouchableOpacity>
