@@ -22,13 +22,13 @@ CREATE INDEX IF NOT EXISTS idx_rmentions_mentioning_user_id ON rmentions(mention
 CREATE INDEX IF NOT EXISTS idx_rmentions_created_at ON rmentions(created_at);
 
 -- Towny AI user account (if not exists)
-INSERT INTO rusers (id, username, password_hash, emoji_icon, is_verified, is_admin, is_moderator, created_at)
+INSERT INTO rusers (id, username, password, emoji_icon, device_id, is_admin, is_moderator, created_at)
 VALUES (
   0, 
   'towny', 
   'ai-assistant-hash', 
-  '🤖', 
-  true, 
+  '🤖',
+  'system',
   false, 
   false, 
   NOW()

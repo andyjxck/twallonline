@@ -10,9 +10,9 @@ const townyAI = {
         .upsert({
           id: 0,
           username: 'towny',
-          password_hash: 'ai-assistant-hash',
+          password: 'ai-assistant-hash',
           emoji_icon: '🤖',
-          is_verified: true,
+          device_id: 'system',
           is_admin: false,
           is_moderator: false,
           created_at: new Date().toISOString()

@@ -74,7 +74,7 @@
       [
         "expo-router",
         {
-          "sitemap": false
+          "sitemap": true
         }
       ],
       [
@@ -125,7 +125,8 @@
               "userTrackingUsageDescription": "This information is used to show relevant ads and to understand how users interact with Town Wall so we can improve features and performance."
             }
       ],
-      "expo-asset"
+      "expo-asset",
+      "./plugins/withSEO"
     ],
     "web": {
       "bundler": "metro",
@@ -139,7 +140,7 @@
     "extra": {
       "router": {
         "origin": false,
-        "sitemap": false
+        "sitemap": true
       },
       "eas": {
         "projectId": "3d185e44-e9e3-4196-9dc9-a45a2fdff729"

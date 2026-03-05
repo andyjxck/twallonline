@@ -56,6 +56,17 @@ import { Image } from "expo-image";
 import { getDeviceId } from "../utils/deviceId";
 import { supabase } from "../utils/supabase";
 import * as Haptics from "expo-haptics";
+
+// Web-safe haptic feedback
+const triggerHaptic = (style) => {
+  if (Platform.OS !== 'web') {
+    try {
+      Haptics.impactAsync(style);
+    } catch (e) {
+      console.log('Haptics not available');
+    }
+  }
+};
 import { theme as defaultTheme } from "../utils/theme";
 import { getStoredUser } from "../utils/user";
 import { useAuthStore, useChatStore, useFeedHighlightStore } from "../utils/auth";
@@ -847,7 +858,11 @@ if (isOnline) syncPendingPosts();
                         <TouchableOpacity 
                           key={s} 
                           onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            try {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            } catch (e) {
+                              console.log('Haptics not available');
+                            }
                             setSortBy(s);
                           }} 
                           style={[
@@ -881,7 +896,11 @@ if (isOnline) syncPendingPosts();
                             <View style={styles.zoneGrid}>
                               <TouchableOpacity 
                                 onPress={() => {
-                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                  try {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                  } catch (e) {
+                                    console.log('Haptics not available');
+                                  }
                                   setSelectedZone(null);
                                 }} 
                                 style={[
@@ -893,11 +912,15 @@ if (isOnline) syncPendingPosts();
                               >
                                 <Text style={[styles.pillText, (isHippie || !selectedZone) && { color: !selectedZone ? '#000' : '#FFF' }]}>All Zones</Text>
                               </TouchableOpacity>
-                              {filteredZones.map(z => (
+                              {zones.filter(z => zoneSearch === '' || z.name.toLowerCase().includes(zoneSearch.toLowerCase())).map(z => (
                                 <TouchableOpacity 
                                   key={z.id} 
                                   onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    try {
+                                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    } catch (e) {
+                                      console.log('Haptics not available');
+                                    }
                                     setSelectedZone(z.id);
                                   }} 
                                   style={[
@@ -918,7 +941,11 @@ if (isOnline) syncPendingPosts();
 
                     <TouchableOpacity 
                       onPress={() => { 
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        } catch (e) {
+                          console.log('Haptics not available');
+                        }
                         setShowFilterSort(false); 
                         setZoneSearch(""); 
                       }} 

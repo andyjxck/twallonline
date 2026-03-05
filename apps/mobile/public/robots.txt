@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://townwall.co.uk/sitemap.xml

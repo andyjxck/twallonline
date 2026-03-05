@@ -94,19 +94,10 @@ export const initUser = async () => {
     }
 
     if (!ruser) {
-      // 3. Still nothing? Create anonymous user
-      const { data: newUser, error: createError } = await supabase
-        .from('rusers')
-        .insert({ 
-          device_id: deviceId,
-          username: `Anon${Math.floor(Math.random() * 10000)}`,
-          emoji_icon: '👤'
-        })
-        .select()
-        .single();
-      
-      if (createError) throw createError;
-      ruser = newUser;
+      // 3. Still nothing? Return null instead of creating anonymous user
+      // This prevents database pollution with useless anon profiles
+      console.log('No user found for device_id:', deviceId, 'and no anonymous user creation allowed');
+      return null;
     }
 
 // Sync with RevenueCat
@@ -121,7 +112,6 @@ await Purchases.logIn(ruser.id.toString());
 console.error("RevenueCat login error:", e);
 }
 }
-
 
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(ruser));
     

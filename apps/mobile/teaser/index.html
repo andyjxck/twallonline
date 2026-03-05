@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Town Wall — Teaser</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#050505;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;}
+
+/* PHONE */
+.phone{width:390px;height:844px;background:#000;border-radius:52px;position:relative;overflow:hidden;flex-shrink:0;box-shadow:0 0 0 1px rgba(255,255,255,0.12),0 0 0 7px #0d0d0d,0 0 0 8px rgba(255,255,255,0.06),0 50px 120px rgba(0,0,0,0.95);}
+.phone::before{content:'';position:absolute;top:12px;left:50%;transform:translateX(-50%);width:118px;height:34px;background:#000;border-radius:20px;z-index:900;}
+
+/* BG PATTERN */
+.bg-pattern{position:absolute;inset:0;opacity:0.055;background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.7'%3E%3Ccircle cx='20' cy='20' r='10'/%3E%3Ccircle cx='60' cy='60' r='14'/%3E%3Crect x='48' y='8' width='20' height='14' rx='3'/%3E%3Cpath d='M5 50 l10 0 l0-8 l10 0'/%3E%3Cpolygon points='30,55 38,42 46,55'/%3E%3Ccircle cx='70' cy='25' r='6'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat;background-size:80px 80px;pointer-events:none;z-index:1;}
+
+/* STATUS BAR */
+.sb{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 8px;z-index:800;pointer-events:none;}
+.sb-time{color:#fff;font-size:15px;font-weight:600;letter-spacing:-.2px;}
+.sb-right{display:flex;align-items:center;gap:5px;}
+
+/* PROGRESS STRIP */
+.prog-strip{position:absolute;top:4px;left:4px;right:4px;height:2px;display:flex;gap:3px;z-index:850;pointer-events:none;align-items:center;}
+.prog-seg{flex:1;height:2px;border-radius:2px;background:rgba(255,255,255,0.18);overflow:hidden;}
+.prog-seg-fill{height:100%;width:0%;background:rgba(255,255,255,0.9);border-radius:2px;}
+.prog-seg.done .prog-seg-fill{width:100%;}
+.prog-seg.active .prog-seg-fill{animation:fillProg var(--dur,10s) linear forwards;}
+@keyframes fillProg{from{width:0%}to{width:100%}}
+
+/* PILL NAV */
+.pill-nav{position:absolute;bottom:20px;left:20px;right:20px;height:56px;background:rgba(20,20,30,0.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:28px;border:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-around;z-index:700;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
+.pn-item{display:flex;align-items:center;justify-content:center;width:52px;height:48px;opacity:0.3;}
+.pn-item.on{opacity:1;}
+.pn-menu-circle{width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;opacity:1!important;}
+.pn-sparkle{width:40px;height:40px;border-radius:20px;background:linear-gradient(135deg,#FBBF24,#F59E0B);display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(251,191,36,0.4);}
+
+/* SCENES */
+.scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity 0.5s cubic-bezier(0.4,0,0.2,1);background:#000;z-index:10;}
+.scene.active{opacity:1;pointer-events:all;}
+/* Image avatars */
+.img-av{width:100%;height:100%;object-fit:cover;border-radius:inherit;}
+.sc-card-img-photo{width:100%;height:100%;object-fit:cover;border-radius:0;}
+
+/* ─── SHARED FLOATCHAT STYLES (scenes 1 & 3) ─── */
+.fc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.fc-header-left{display:flex;align-items:center;gap:12px;}
+.fc-close-btn{width:34px;height:34px;border-radius:17px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.fc-header-title{color:#fff;font-size:18px;font-weight:700;}
+.fc-header-right{display:flex;align-items:center;gap:8px;}
+.fc-icon-btn{width:32px;height:32px;border-radius:16px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;}
+/* Chat list */
+.fc-list{flex:1;overflow:hidden;}
+.fc-list-item{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.03);opacity:0;transform:translateX(-10px);transition:opacity .3s ease,transform .3s ease;}
+.fc-list-item.in{opacity:1;transform:translateX(0);}
+.fc-av-wrap{position:relative;flex-shrink:0;}
+.fc-list-av{width:52px;height:52px;border-radius:26px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:26px;}
+.fc-status-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;border-radius:6px;background:#10B981;border:2px solid #000;}
+.fc-chat-info{margin-left:14px;flex:1;min-width:0;}
+.fc-chat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.fc-chat-name{color:#fff;font-weight:700;font-size:15px;}
+.fc-chat-time{color:rgba(255,255,255,0.3);font-size:11px;flex-shrink:0;}
+.fc-chat-last{color:rgba(255,255,255,0.5);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fc-unread{background:#fff;border-radius:10px;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;padding:0 5px;flex-shrink:0;}
+.fc-unread-txt{color:#000;font-size:10px;font-weight:800;}
+/* Thread */
+.fc-thread{display:flex;flex-direction:column;position:absolute;inset:0;background:#000;transform:translateX(100%);transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);padding-top:54px;padding-bottom:84px;z-index:20;}
+.fc-thread.open{transform:translateX(0);}
+.fc-thread-hd{display:flex;align-items:center;padding:10px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.06);gap:12px;}
+.fc-back-btn{width:32px;height:32px;border-radius:16px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.fc-thread-av-wrap{position:relative;flex-shrink:0;}
+.fc-thread-av{width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.fc-thread-online{position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:6px;background:#10B981;border:2px solid #000;}
+.fc-thread-info{flex:1;}
+.fc-thread-name{color:#fff;font-size:16px;font-weight:700;}
+.fc-thread-status{color:rgba(255,255,255,0.4);font-size:12px;margin-top:1px;}
+.fc-thread-actions{display:flex;gap:6px;}
+/* E2E banner */
+.fc-e2e{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 16px;background:rgba(0,0,0,0.4);border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;color:rgba(255,255,255,0.28);font-weight:600;letter-spacing:.2px;}
+/* Messages */
+.fc-msgs{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:6px;overflow:hidden;justify-content:flex-end;}
+.fc-row{display:flex;align-items:flex-end;gap:8px;}
+.fc-row.me{justify-content:flex-end;}
+.fc-msg-av{width:32px;height:32px;border-radius:16px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.fc-bbl{max-width:80%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.42;font-weight:500;opacity:0;transform:translateY(8px) scale(0.94);transition:opacity .28s ease,transform .28s cubic-bezier(0.34,1.56,0.64,1);}
+.fc-bbl.show{opacity:1;transform:translateY(0) scale(1);}
+.fc-bbl.me{background:#fff;color:#000;border-bottom-right-radius:4px;}
+.fc-bbl.them{background:#334155;color:#fff;border-bottom-left-radius:4px;}
+.fc-bbl .tick{font-size:10px;color:rgba(0,0,0,0.3);margin-top:3px;text-align:right;}
+/* Typing dots */
+.fc-typing{background:#334155;padding:10px 14px;border-radius:18px;border-bottom-left-radius:4px;display:flex;gap:4px;align-items:center;width:fit-content;}
+.fc-typing span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.5);animation:tdot 1s infinite;}
+.fc-typing span:nth-child(2){animation-delay:.18s;}
+.fc-typing span:nth-child(3){animation-delay:.36s;}
+@keyframes tdot{0%,60%,100%{opacity:.4;transform:translateY(0);}30%{opacity:1;transform:translateY(-4px);}}
+/* Input bar */
+.fc-inp-bar{padding:12px 16px;background:#000;border-top:1px solid rgba(255,255,255,0.06);}
+.fc-inp-wrap{display:flex;align-items:center;background:rgba(255,255,255,0.05);border-radius:24px;padding:4px 4px 4px 14px;border:1px solid rgba(255,255,255,0.1);gap:6px;}
+.fc-inp-plus{display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.fc-inp-field{flex:1;background:transparent;color:rgba(255,255,255,0.3);font-size:15px;border:none;outline:none;font-family:inherit;min-height:36px;display:flex;align-items:center;}
+.fc-inp-send{width:36px;height:36px;border-radius:18px;background:linear-gradient(135deg,#fff,#4ADE80);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+/* Call overlay */
+.call-ov{position:absolute;inset:0;background:rgba(0,0,0,0.93);display:flex;flex-direction:column;align-items:center;padding-top:75px;opacity:0;transition:opacity .4s ease;z-index:600;}
+.call-ov.show{opacity:1;}
+.call-av-lg{width:110px;height:110px;border-radius:55px;background:#1E293B;border:3px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:50px;margin-bottom:18px;}
+.call-name-txt{color:#fff;font-size:24px;font-weight:800;margin-bottom:10px;}
+.call-status{color:rgba(255,255,255,0.5);font-size:16px;font-weight:500;margin-bottom:auto;}
+.call-dur-pill{display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.08);padding:8px 16px;border-radius:20px;margin-bottom:auto;}
+.call-active-dot{width:8px;height:8px;border-radius:4px;background:#10B981;}
+.call-dur-txt{color:#fff;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;}
+.call-actions{display:flex;justify-content:space-around;width:100%;padding:0 16px 40px;margin-top:auto;}
+.call-act{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;}
+.call-act-circle{width:56px;height:56px;border-radius:28px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;}
+.call-act-circle.lit{background:#fff;}
+.call-act-circle.red{background:#EF4444;}
+.call-act-lbl{color:rgba(255,255,255,0.55);font-size:11px;font-weight:600;}
+
+/* ─── SCENE 2: FEED ─── */
+#s2{display:flex;flex-direction:column;padding-top:54px;padding-bottom:84px;}
+.feed-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 20px 10px;}
+.feed-loc{display:flex;align-items:center;gap:4px;}
+.feed-loc-txt{color:#fff;font-size:16px;font-weight:600;}
+.feed-loc-chv{color:rgba(255,255,255,0.4);font-size:13px;}
+.feed-icons{display:flex;gap:16px;align-items:center;color:rgba(255,255,255,0.8);}
+.zone-pills{display:flex;gap:6px;padding:0 14px 8px;border-bottom:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.zpill{padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.45);white-space:nowrap;flex-shrink:0;}
+.zpill.on{background:#fff;color:#000;}
+.stories{display:flex;gap:10px;padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.st-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
+.st-ring{width:72px;height:72px;border-radius:36px;padding:2.5px;background:linear-gradient(135deg,#f9ca24,#f0932b,#e84393,#6a11cb);}
+.st-ring.viewed{background:rgba(255,255,255,0.12);}
+.st-ring.add{background:rgba(255,255,255,0.09);}
+.st-inner{width:100%;height:100%;border-radius:50%;background:#111;border:2.5px solid #000;display:flex;align-items:center;justify-content:center;font-size:26px;}
+.st-lbl{color:rgba(255,255,255,0.45);font-size:10px;font-weight:500;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
+.ticker{display:flex;gap:6px;padding:6px 14px;border-bottom:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.tick-tag{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:4px 10px;color:rgba(255,255,255,0.5);font-size:11px;white-space:nowrap;flex-shrink:0;}
+.composer{margin:10px 12px 4px;background:#121212;border:1px solid rgba(255,255,255,0.08);border-radius:30px;padding:12px 16px;display:flex;align-items:center;gap:12px;}
+.comp-av{width:38px;height:38px;border-radius:19px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.comp-txt{flex:1;color:rgba(255,255,255,0.25);font-size:15px;}
+.feed-scroll{flex:1;overflow:hidden;position:relative;}
+.feed-posts{padding:8px 12px 16px;display:flex;flex-direction:column;gap:10px;}
+/* POST CARD */
+.pcard{background:#121212;border-radius:16px;border:1px solid rgba(255,255,255,0.1);overflow:hidden;}
+.pcard.new-in{opacity:0;transform:translateY(-14px) scale(0.97);transition:opacity .4s ease,transform .4s cubic-bezier(0.34,1.4,0.64,1);}
+.pcard.new-in.popped{opacity:1;transform:translateY(0) scale(1);}
+.pc-hd{display:flex;align-items:center;padding:12px 12px 8px;}
+.pc-av{width:40px;height:40px;border-radius:20px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;margin-right:10px;}
+.pc-meta{flex:1;}
+.pc-user-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px;}
+.pc-uname{color:#fff;font-size:15px;font-weight:700;}
+.pc-online{width:7px;height:7px;border-radius:50%;background:#10B981;flex-shrink:0;}
+.rbadge{padding:2px 5px;border-radius:4px;font-size:9px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.3px;}
+.rb-biz{background:#8B5CF6;}
+.rb-talent{background:#F59E0B;}
+.pc-sub{display:flex;align-items:center;gap:3px;flex-wrap:wrap;}
+.pc-zone{color:rgba(255,255,255,0.4);font-size:12px;font-weight:600;}
+.pc-bull{color:rgba(255,255,255,0.2);font-size:12px;}
+.pc-when{color:rgba(255,255,255,0.3);font-size:12px;}
+.pc-more{color:rgba(255,255,255,0.2);font-size:20px;padding-left:6px;line-height:1;margin-left:auto;}
+.pc-bd{padding:0 12px 10px;font-size:15px;color:#fff;line-height:1.48;}
+.pc-bd-with{padding:0 12px 10px;display:flex;gap:10px;align-items:flex-start;}
+.pc-bd-txt{flex:1;font-size:15px;color:#fff;line-height:1.48;}
+.pc-thumb{width:80px;height:80px;border-radius:10px;background:#1a1a1a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid rgba(255,255,255,0.06);}
+.new-badge{display:inline-block;background:#fff;color:#000;font-size:9px;font-weight:800;padding:2px 7px;border-radius:0 0 6px 6px;letter-spacing:.5px;text-transform:uppercase;position:absolute;top:0;left:14px;}
+.pc-ft{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 12px;border-top:1px solid rgba(255,255,255,0.05);}
+.pc-acts{display:flex;gap:18px;align-items:center;}
+.pc-act{display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.38);font-size:13px;}
+.pc-act.red{color:#EF4444;}
+.pc-act.gold{color:#FBBF24;}
+.pc-cta{display:flex;align-items:center;gap:5px;background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;color:#000;}
+
+/* ─── SCENE 4: BUSINESSES ─── */
+#s4{display:flex;flex-direction:column;padding-top:54px;padding-bottom:84px;}
+.sc-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;}
+.sc-hd-title{color:#fff;font-size:18px;font-weight:900;letter-spacing:2px;}
+.sc-hd-btn{background:#fff;border-radius:100px;padding:6px 14px;font-size:11px;font-weight:900;color:#000;}
+.sc-search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);border-radius:12px;padding:0 14px;height:42px;margin:0 20px 10px;}
+.sc-search-icon{color:rgba(255,255,255,0.3);}
+.sc-search-txt{color:rgba(255,255,255,0.25);font-size:14px;}
+.sc-scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+.sc-grid{padding:0 6px 16px;display:grid;grid-template-columns:1fr 1fr;}
+.sc-grid-label{grid-column:1/-1;padding:4px 8px;color:rgba(255,255,255,0.2);font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;}
+.sc-card{height:220px;margin:6px;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:#111;display:flex;flex-direction:column;opacity:0;transform:translateY(12px) scale(0.95);transition:opacity .3s ease,transform .3s cubic-bezier(0.34,1.4,0.64,1);}
+.sc-card.in{opacity:1;transform:translateY(0) scale(1);}
+.sc-card-img{flex:1;position:relative;display:flex;align-items:center;justify-content:center;font-size:48px;}
+.sc-card-grad{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.85) 100%);}
+.sc-card-rating{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:3px 8px;font-size:10px;color:#fff;font-weight:900;}
+.sc-card-info{background:#121212;padding:9px 12px;border-top:1px solid rgba(255,255,255,0.05);}
+.sc-card-name{color:#fff;font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-card-by{color:rgba(255,255,255,0.35);font-size:10px;font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-card-cat{color:rgba(255,255,255,0.28);font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:2px;}
+
+/* ─── SCENE 5: TOWNY AI ─── */
+#s5{display:flex;flex-direction:column;padding-top:54px;padding-bottom:84px;}
+.towny-hd{display:flex;align-items:center;gap:10px;padding:12px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.07);}
+.towny-av{width:40px;height:40px;border-radius:20px;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.towny-info{flex:1;}
+.towny-title{color:#fff;font-size:16px;font-weight:900;letter-spacing:2px;text-transform:uppercase;}
+.towny-sub{color:#FBBF24;font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.towny-clear{color:rgba(255,255,255,0.25);font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;}
+.towny-msgs{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:hidden;}
+.trow{display:flex;align-items:flex-end;gap:8px;}
+.trow.me{justify-content:flex-end;}
+.tav{width:32px;height:32px;border-radius:16px;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.22);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-bottom:2px;}
+.tav.u{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.09);}
+.tbbl{max-width:85%;padding:14px 18px;border-radius:24px;font-size:15px;line-height:1.5;font-weight:500;opacity:0;transform:scale(0.9) translateY(8px);transition:opacity .3s ease,transform .3s cubic-bezier(0.34,1.56,0.64,1);}
+.tbbl.show{opacity:1;transform:scale(1) translateY(0);}
+.tbbl.me{background:#fff;color:#000;border-bottom-right-radius:5px;}
+.tbbl.ai{background:#121212;color:#fff;border-bottom-left-radius:5px;border:1px solid rgba(255,255,255,0.1);}
+.tbbl .hl{color:#FBBF24;font-weight:700;}
+.ai-lbl{font-size:9px;font-weight:900;color:#FBBF24;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;padding-left:42px;opacity:0;transition:opacity .3s;}
+.ai-lbl.show{opacity:1;}
+.towny-cta{margin:0 16px 8px;background:linear-gradient(135deg,#FBBF24,#F59E0B);border-radius:20px;padding:18px;display:flex;align-items:center;justify-content:space-between;opacity:0;transform:translateY(16px) scale(0.95);transition:opacity .5s ease,transform .5s cubic-bezier(0.34,1.3,0.64,1);}
+.towny-cta.show{opacity:1;transform:translateY(0) scale(1);}
+.tc-headline{color:#000;font-size:18px;font-weight:900;letter-spacing:-.3px;line-height:1.25;}
+.tc-sub{color:rgba(0,0,0,0.5);font-size:12px;margin-top:4px;font-weight:600;}
+.tc-arrow{width:48px;height:48px;border-radius:24px;background:rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.towny-inp-bar{display:flex;align-items:center;gap:10px;padding:8px 20px 8px;border-top:1px solid rgba(255,255,255,0.07);}
+.towny-inp{flex:1;background:#121212;border-radius:24px;padding:12px 20px;color:rgba(255,255,255,0.25);font-size:15px;border:none;outline:none;font-family:inherit;}
+.towny-send{width:44px;height:44px;border-radius:22px;background:#FBBF24;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;font-weight:900;color:#000;}
+/* Scene 6 end splash */
+.s6-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:40px;}
+.s6-logo{display:flex;flex-direction:column;align-items:center;gap:14px;opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s cubic-bezier(0.34,1.2,0.64,1);}
+.s6-logo.show{opacity:1;transform:translateY(0);}
+.s6-icon{width:96px;height:96px;border-radius:22px;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
+.s6-wordmark{color:#fff;font-size:32px;font-weight:900;letter-spacing:-1px;}
+.s6-sub{color:rgba(255,255,255,0.45);font-size:16px;font-weight:500;text-align:center;opacity:0;transform:translateY(12px);transition:opacity .5s ease .1s,transform .5s ease .1s;}
+.s6-sub.show{opacity:1;transform:translateY(0);}
+.s6-dl{display:flex;gap:12px;opacity:0;transform:translateY(12px);transition:opacity .5s ease .2s,transform .5s ease .2s;}
+.s6-dl.show{opacity:1;transform:translateY(0);}
+.s6-dl-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px 20px;color:#fff;font-size:14px;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="bg-pattern"></div>
+
+  <!-- Status bar -->
+  <div class="sb">
+    <span class="sb-time">9:41</span>
+    <div class="sb-right">
+      <svg width="17" height="11" fill="white" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx=".5"/><rect x="4.5" y="4" width="3" height="7" rx=".5"/><rect x="9" y="1.5" width="3" height="9.5" rx=".5"/><rect x="13.5" y="0" width="3" height="11" rx=".5" opacity=".25"/></svg>
+      <svg width="16" height="11" fill="none" viewBox="0 0 16 11"><path d="M8 9.5a1.3 1.3 0 100-2.6 1.3 1.3 0 000 2.6z" fill="white"/><path d="M4.5 6.9A5 5 0 018 5.6a5 5 0 013.5 1.3" stroke="white" stroke-width="1.3" stroke-linecap="round"/><path d="M1 3.9A9.3 9.3 0 018 1.2a9.3 9.3 0 017 2.7" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity=".4"/></svg>
+      <svg width="25" height="12" fill="none" viewBox="0 0 25 12"><rect x=".5" y="1" width="21" height="10" rx="2.5" stroke="white"/><rect x="22.5" y="4" width="2" height="4" rx="1" fill="white" opacity=".4"/><rect x="2" y="2.5" width="17" height="7" rx="1.5" fill="white"/></svg>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="prog-strip">
+    <div class="prog-seg" id="ps0"><div class="prog-seg-fill"></div></div>
+    <div class="prog-seg" id="ps1"><div class="prog-seg-fill"></div></div>
+    <div class="prog-seg" id="ps2"><div class="prog-seg-fill"></div></div>
+    <div class="prog-seg" id="ps3"><div class="prog-seg-fill"></div></div>
+    <div class="prog-seg" id="ps4"><div class="prog-seg-fill"></div></div>
+    <div class="prog-seg" id="ps5"><div class="prog-seg-fill"></div></div>
+  </div>
+
+  <!-- SCENE 1: FloatingChat -->
+  <div class="scene active" id="s1">
+    <div style="display:flex;flex-direction:column;height:100%;padding-top:54px;padding-bottom:84px;">
+      <div class="fc-header">
+        <div class="fc-header-left">
+          <div class="fc-close-btn"><svg width="16" height="16" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          <span class="fc-header-title">Messages</span>
+        </div>
+        <div class="fc-header-right">
+          <div class="fc-icon-btn"><svg width="17" height="17" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+        </div>
+      </div>
+      <div class="fc-list" id="s1-list"></div>
+    </div>
+    <!-- Thread slides in -->
+    <div class="fc-thread" id="s1-thread">
+      <div class="fc-thread-hd">
+        <div class="fc-back-btn"><svg width="14" height="14" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></div>
+        <div class="fc-thread-av-wrap">
+          <div class="fc-thread-av" style="padding:0;overflow:hidden;"><img src="../assets/images/icon.png" class="img-av" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div>
+          <div class="fc-thread-online"></div>
+        </div>
+        <div class="fc-thread-info">
+          <div class="fc-thread-name">@andysocial</div>
+          <div class="fc-thread-status">Online</div>
+        </div>
+        <div class="fc-thread-actions">
+          <div class="fc-icon-btn"><svg width="15" height="15" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.22 1.22 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.16 6.16l1.27-.56a2 2 0 012.11.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></div>
+          <div class="fc-icon-btn"><svg width="15" height="15" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+          <div class="fc-icon-btn"><svg width="16" height="16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div>
+        </div>
+      </div>
+      <div class="fc-e2e"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Messages are end-to-end encrypted</div>
+      <div class="fc-msgs" id="s1-msgs"></div>
+      <!-- Call overlay -->
+      <div class="call-ov" id="s1-call">
+        <div class="call-av-lg" style="width:90px;height:90px;border-radius:45px;overflow:hidden;padding:0;"><img src="../assets/images/icon.png" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div>
+        <div class="call-name-txt">@andysocial</div>
+        <div class="call-status" id="s1-call-status">Calling&#x2026; &#x1F4F9; Video</div>
+        <div class="call-dur-pill" id="s1-dur-pill"><div class="call-active-dot"></div><span class="call-dur-txt" id="s1-dur-txt">00:00</span></div>
+        <div class="call-actions">
+          <div class="call-act"><div class="call-act-circle lit"><svg width="22" height="22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg></div><span class="call-act-lbl">Speaker</span></div>
+          <div class="call-act"><div class="call-act-circle"><svg width="22" height="22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><span class="call-act-lbl">Video</span></div>
+          <div class="call-act"><div class="call-act-circle lit"><svg width="22" height="22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg></div><span class="call-act-lbl">Mic</span></div>
+          <div class="call-act"><div class="call-act-circle red"><svg width="22" height="22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-.56a2 2 0 012.11.45l2.81 2.81a2 2 0 010 2.82C18.47 23.25 13.36 21 9.51 17.14 5.66 13.28 3.4 8.17 5.2 6.4a2 2 0 012.82 0l2.81 2.81a2 2 0 01.45 2.11l-.6 1"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div><span class="call-act-lbl">End</span></div>
+        </div>
+      </div>
+      <div class="fc-inp-bar">
+        <div class="fc-inp-wrap">
+          <span class="fc-inp-plus"><svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+          <div class="fc-inp-field">Type a message…</div>
+          <div class="fc-inp-send"><svg width="14" height="14" viewBox="0 0 24 24" stroke="#000" fill="none" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="pill-nav">
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="pn-item" style="opacity:1"><div class="pn-menu-circle"><svg width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></div>
+      <div class="pn-item on"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    </div>
+  </div>
+
+  <!-- SCENE 2: Feed -->
+  <div class="scene" id="s2">
+    <div class="feed-hd">
+      <div class="feed-loc"><span class="feed-loc-txt">Redditch</span><span class="feed-loc-chv">▾</span></div>
+      <div class="feed-icons">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/><line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/><line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="14" cy="20" r="2"/></svg>
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+    </div>
+    <div class="zone-pills"><div class="zpill on">All</div><div class="zpill">Webheath</div><div class="zpill">Headless Cross</div><div class="zpill">Town Centre</div></div>
+    <div class="stories">
+      <div class="st-item"><div class="st-ring add"><div class="st-inner" style="font-size:18px;color:rgba(255,255,255,0.4);">&#x271A;</div></div><span class="st-lbl">Your story</span></div>
+      <div class="st-item"><div class="st-ring"><div class="st-inner">&#x1F30A;</div></div><span class="st-lbl">lakeside</span></div>
+      <div class="st-item"><div class="st-ring"><div class="st-inner">&#x2615;</div></div><span class="st-lbl">CafeCorner</span></div>
+      <div class="st-item"><div class="st-ring viewed"><div class="st-inner">&#x1F3B8;</div></div><span class="st-lbl">TheDrift</span></div>
+      <div class="st-item"><div class="st-ring"><div class="st-inner">&#x1F3CB;</div></div><span class="st-lbl">FitRedditch</span></div>
+    </div>
+    <div class="ticker"><div class="tick-tag">#Redditch</div><div class="tick-tag">#LocalEats</div><div class="tick-tag">#LiveMusic</div><div class="tick-tag">#Worcestershire</div><div class="tick-tag">#RedditchVibes</div></div>
+    <div class="composer"><div class="comp-av">&#x1F60A;</div><span class="comp-txt">What's happening in your area?</span></div>
+    <div class="feed-scroll">
+      <div class="feed-posts" id="feed-posts">
+        <div class="pcard">
+          <div class="pc-hd"><div class="pc-av">&#x1F30A;</div><div class="pc-meta"><div class="pc-user-row"><span class="pc-uname">@lakeside_redditch</span><div class="pc-online"></div></div><div class="pc-sub"><span class="pc-zone">Arrow Valley Lake</span><span class="pc-bull">·</span><span class="pc-when">4m ago</span></div></div><span class="pc-more">⋯</span></div>
+          <div class="pc-bd">Seal just washed up at the lake &#x1F9AD; Absolute unit. Never seen one this close. Get down here. #Redditch #Wildlife</div>
+          <div class="pc-ft"><div class="pc-acts"><div class="pc-act red"><svg width="16" height="16" viewBox="0 0 24 24" fill="#EF4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> 312</div><div class="pc-act"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> 214</div></div><div class="pc-act gold"><svg width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 87</div></div>
+        </div>
+        <div class="pcard new-in" id="np1" style="position:relative;">
+          <div class="new-badge">New</div>
+          <div class="pc-hd"><div class="pc-av" style="background-image: url('../assets/images/andrewblewett.jpg');"></div><div class="pc-meta"><div class="pc-user-row"><span class="pc-uname">@andrewblewett</span><span class="rbadge rb-talent">Developer</span></div><div class="pc-sub"><span class="pc-zone">Redditch</span><span class="pc-bull">&middot;</span><span class="pc-when">just now</span></div></div><span class="pc-more">&ctdot;</span></div>
+          <div class="pc-bd-with"><div class="pc-bd-txt">Just shipped a new update to Town Wall &#x1F680; Feed is faster, stories are smoother, and there's a new showcase layout. Let me know what you think. #Dev #TownWall #Redditch</div><div class="pc-thumb" style="font-size:28px;">&#x1F680;</div></div>
+          <div class="pc-ft"><div class="pc-acts"><div class="pc-act red"><svg width="16" height="16" viewBox="0 0 24 24" fill="#EF4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> 48</div><div class="pc-act"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> 12</div></div><div class="pc-cta"><svg width="11" height="11" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Chat</div></div>
+        </div>
+        <div class="pcard">
+          <div class="pc-hd"><div class="pc-av" style="background-image: url('../assets/images/maddox.jpg');"></div><div class="pc-meta"><div class="pc-user-row"><span class="pc-uname">@maddoxvr</span><span class="rbadge rb-talent">Creator</span></div><div class="pc-sub"><span class="pc-zone">Redditch</span><span class="pc-bull">&middot;</span><span class="pc-when">18m ago</span></div></div><span class="pc-more">&ctdot;</span></div>
+          <div class="pc-bd">New VR video dropping tomorrow &#x1F61C; Shot entirely in Redditch. This place looks wild in 360. Do not sleep on this. #VR #YouTube #Redditch</div>
+          <div class="pc-ft"><div class="pc-acts"><div class="pc-act red"><svg width="16" height="16" viewBox="0 0 24 24" fill="#EF4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> 93</div><div class="pc-act"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> 27</div></div></div>
+        </div>
+        <div class="pcard new-in" id="np2" style="position:relative;">
+          <div class="new-badge">New</div>
+          <div class="pc-hd"><div class="pc-av" style="font-size:22px;">&#x1F3A5;</div><div class="pc-meta"><div class="pc-user-row"><span class="pc-uname">@leadtheway</span><span class="rbadge rb-talent">Creator</span></div><div class="pc-sub"><span class="pc-zone">Webheath</span><span class="pc-bull">&middot;</span><span class="pc-when">just now</span></div></div><span class="pc-more">&ctdot;</span></div>
+          <div class="pc-bd">Behind the scenes of my latest shoot &#x1F3AC; Love that I can post this directly to my neighbours. Local content hits different. #Content #Redditch</div>
+          <div class="pc-ft"><div class="pc-acts"><div class="pc-act red"><svg width="16" height="16" viewBox="0 0 24 24" fill="#EF4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> 55</div><div class="pc-act"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> 19</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="pill-nav">
+      <div class="pn-item on"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="pn-item" style="opacity:1"><div class="pn-menu-circle"><svg width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    </div>
+  </div>
+
+  <!-- SCENE 3: Chat thread -->
+  <div class="scene" id="s3">
+    <div style="display:flex;flex-direction:column;height:100%;padding-top:54px;padding-bottom:84px;">
+      <div class="fc-thread-hd">
+        <div class="fc-back-btn"><svg width="14" height="14" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></div>
+        <div class="fc-thread-av-wrap"><div class="fc-thread-av" style="padding:0;overflow:hidden;"><img src="../assets/images/icon.png" class="img-av" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div><div class="fc-thread-online"></div></div>
+        <div class="fc-thread-info"><div class="fc-thread-name">@andysocial</div><div class="fc-thread-status">Online</div></div>
+        <div class="fc-thread-actions">
+          <div class="fc-icon-btn"><svg width="15" height="15" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.22 1.22 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.16 6.16l1.27-.56a2 2 0 012.11.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></div>
+          <div class="fc-icon-btn"><svg width="15" height="15" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+          <div class="fc-icon-btn"><svg width="16" height="16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div>
+        </div>
+      </div>
+      <div class="fc-e2e"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Messages are end-to-end encrypted</div>
+      <div id="s3-msgs" style="flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:6px;overflow:hidden;justify-content:flex-end;"></div>
+      <div class="call-ov" id="s3-call">
+        <div class="call-av-lg" style="width:90px;height:90px;border-radius:45px;overflow:hidden;padding:0;"><img src="../assets/images/icon.png" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div>
+        <div class="call-name-txt">@andysocial</div>
+        <div class="call-status" id="s3-call-status">Calling&#x2026; &#x1F4E5; Voice</div>
+        <div class="call-dur-pill" id="s3-dur-pill"><div class="call-active-dot"></div><span class="call-dur-txt" id="s3-dur-txt">00:00</span></div>
+        <div class="call-actions">
+          <div class="call-act"><div class="call-act-circle lit"><svg width="22" height="22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg></div><span class="call-act-lbl">Speaker</span></div>
+          <div class="call-act"><div class="call-act-circle"><svg width="22" height="22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><span class="call-act-lbl">Video</span></div>
+          <div class="call-act"><div class="call-act-circle lit"><svg width="22" height="22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg></div><span class="call-act-lbl">Mic</span></div>
+          <div class="call-act"><div class="call-act-circle red"><svg width="22" height="22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-.56a2 2 0 012.11.45l2.81 2.81a2 2 0 010 2.82C18.47 23.25 13.36 21 9.51 17.14 5.66 13.28 3.4 8.17 5.2 6.4a2 2 0 012.82 0l2.81 2.81a2 2 0 01.45 2.11l-.6 1"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div><span class="call-act-lbl">End</span></div>
+        </div>
+      </div>
+      <div class="fc-inp-bar">
+        <div class="fc-inp-wrap">
+          <span class="fc-inp-plus"><svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+          <div class="fc-inp-field">Type a message…</div>
+          <div class="fc-inp-send"><svg width="14" height="14" viewBox="0 0 24 24" stroke="#000" fill="none" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="pill-nav">
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="pn-item" style="opacity:1"><div class="pn-menu-circle"><svg width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></div>
+      <div class="pn-item on"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    </div>
+  </div>
+
+  <!-- SCENE 4: Businesses & Talent -->
+  <div class="scene" id="s4">
+    <div class="sc-hd"><span class="sc-hd-title" id="s4-title">BUSINESSES</span><div class="sc-hd-btn">+ List yours</div></div>
+    <div class="sc-search"><span class="sc-search-icon"><svg width="14" height="14" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><span class="sc-search-txt" id="s4-search-txt">Search businesses…</span></div>
+    <div class="sc-scroll"><div id="sc-grid" class="sc-grid"></div></div>
+    <div class="pill-nav">
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="pn-item on"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="pn-item" style="opacity:1"><div class="pn-menu-circle"><svg width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    </div>
+  </div>
+
+  <!-- SCENE 5: Towny AI -->
+  <div class="scene" id="s5">
+    <div class="towny-hd"><div class="towny-av">&#x2728;</div><div class="towny-info"><div class="towny-title">Towny</div><div class="towny-sub">AI Assistant · Town Wall</div></div><span class="towny-clear">Clear</span></div>
+    <div class="towny-msgs" id="s5-msgs"></div>
+    <div class="towny-cta" id="towny-cta"><div><div class="tc-headline">What are you<br>waiting for?</div><div class="tc-sub">Town Wall — free on iOS &amp; Android</div></div><div class="tc-arrow">&#x1F680;</div></div>
+    <div class="towny-inp-bar"><div class="towny-inp">Ask Towny anything…</div><div class="towny-send">↑</div></div>
+    <div class="pill-nav">
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="pn-item"><div class="pn-sparkle">&#x2728;</div></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="pn-item"><svg width="20" height="20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    </div>
+  </div>
+
+  <!-- SCENE 6: End splash -->
+  <div class="scene" id="s6">
+    <div class="s6-wrap">
+      <div class="s6-logo" id="s6-logo">
+        <img src="../assets/images/icon.png" class="s6-icon" onerror="this.style.display='none'">
+        <div class="s6-wordmark">Town Wall</div>
+      </div>
+      <div class="s6-sub" id="s6-sub">Your neighbourhood. Connected.</div>
+      <div class="s6-dl" id="s6-dl">
+        <div class="s6-dl-btn">&#x1F34F; App Store</div>
+        <div class="s6-dl-btn">&#x1F916; Google Play</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ── Scene durations (ms) ── */
+const DUR=[16000,13000,15000,12000,14000,5000];
+let cur=0,advTimer=null;
+
+function startProgress(n){
+  const seg=$('ps'+n),fill=seg.querySelector('.prog-seg-fill');
+  fill.style.animation='none';fill.style.width='0%';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    seg.classList.remove('done');seg.classList.add('active');
+    fill.style.setProperty('--dur',DUR[n]+'ms');
+    fill.style.animation='fillProg '+DUR[n]+'ms linear forwards';
+  }));
+}
+function markDone(n){const s=$('ps'+n);s.classList.remove('active');s.classList.add('done');}
+
+function goScene(n){
+  document.querySelectorAll('.scene').forEach((s,i)=>s.classList.toggle('active',i===n));
+  startProgress(n);cur=n;clearTimeout(advTimer);
+  advTimer=setTimeout(advance,DUR[n]);
+}
+function advance(){markDone(cur);if(cur>=5)return;const next=cur+1;goScene(next);runScene(next);}
+
+/* tap to advance */
+$('phone').addEventListener('click',()=>{
+  const fill=$('ps'+cur).querySelector('.prog-seg-fill');
+  fill.style.animation='none';fill.style.width='100%';
+  markDone(cur);if(cur>=5)return;const next=cur+1;goScene(next);runScene(next);
+});
+
+/* ═══════════════════════════════
+   SCENE 1 — FloatingChat list → thread → call
+═══════════════════════════════ */
+async function scene1(){
+  const list=$('s1-list'),thread=$('s1-thread'),msgBox=$('s1-msgs');
+  const callOv=$('s1-call'),callStat=$('s1-call-status'),durPill=$('s1-dur-pill'),durTxt=$('s1-dur-txt');
+  thread.classList.remove('open');
+  list.innerHTML='';msgBox.innerHTML='';
+  callOv.classList.remove('show');callStat.textContent='Calling…';durPill.style.display='none';
+
+  /* Chat list */
+  const CHATS=[
+    {em:'<img src="../assets/images/icon.png" style="width:100%;height:100%;object-fit:cover;border-radius:26px;">',name:'@andysocial',last:'have you seen the seal post &#x1F62D;&#x1F9AD;',time:'9:38',online:true,unread:1},
+    {em:'&#x1F3CB;',name:'FitRedditch Squad',last:"Who's doing parkrun tomorrow?",time:'9:12',group:true},
+    {em:'&#x1F3B8;',name:'@TheDrift',last:'Cheers for coming last night &#x1F64F;',time:'Tue'},
+  ];
+  for(let i=0;i<CHATS.length;i++){
+    await sleep(i===0?600:350);
+    const c=CHATS[i];
+    const el=document.createElement('div');
+    el.className='fc-list-item';
+    el.innerHTML=`
+      <div class="fc-av-wrap">
+        <div class="fc-list-av">${c.em}</div>
+        ${c.online?'<div class="fc-status-dot"></div>':''}
+      </div>
+      <div class="fc-chat-info">
+        <div class="fc-chat-top">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="fc-chat-name">${c.name}</span>
+            ${c.group?'<svg width="12" height="12" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>':''}
+          </div>
+          <span class="fc-chat-time">${c.time}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="fc-chat-last">${c.last}</span>
+          ${c.unread?`<div class="fc-unread"><span class="fc-unread-txt">${c.unread}</span></div>`:''}
+        </div>
+      </div>`;
+    list.appendChild(el);
+    await sleep(16);el.classList.add('in');
+  }
+
+  /* Open thread for jess */
+  await sleep(2200);
+  thread.classList.add('open');
+
+  /* Messages — already on Town Wall, chatting about the seal post on the feed */
+  const MSGS=[
+    {me:false,text:"have you seen the seal post &#x1F62D;&#x1F9AD;",delay:1600},
+    {me:true, text:"yes!! I'm literally on the feed rn",delay:2400},
+    {me:false,text:"over 200 comments already lmaooo this app is wild",delay:1800},
+    {me:true, text:"are you going down to the lake?",delay:2600},
+    {me:false,text:"yes get down here!! meet me &#x1F3C3;",delay:1600},
+    {me:true, text:"jumping on a call &#x2014; easier",delay:2200},
+    {me:false,text:"go on then &#x1F4DE;",delay:1400},
+  ];
+  for(const m of MSGS){
+    await sleep(m.delay);
+    if(!m.me){
+      const tr=document.createElement('div');tr.className='fc-row';
+      tr.innerHTML=`<div class="fc-msg-av" style="padding:0;overflow:hidden;"><img src="../assets/images/icon.png" class="img-av" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div><div class="fc-typing"><span></span><span></span><span></span></div>`;
+      msgBox.appendChild(tr);msgBox.scrollTop=9999;
+      await sleep(1000);msgBox.removeChild(tr);
+    }
+    const row=document.createElement('div');row.className='fc-row'+(m.me?' me':'');
+    if(m.me){
+      row.innerHTML=`<div class="fc-bbl me">${m.text}<div class="tick">&#x2713;&#x2713;</div></div>`;
+    }else{
+      row.innerHTML=`<div class="fc-msg-av" style="padding:0;overflow:hidden;"><img src="../assets/images/icon.png" class="img-av" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div><div class="fc-bbl them">${m.text}</div>`;
+    }
+    msgBox.appendChild(row);await sleep(16);
+    row.querySelector('.fc-bbl').classList.add('show');
+    msgBox.scrollTop=9999;
+  }
+
+  /* Call */
+  await sleep(2000);
+  callOv.classList.add('show');
+  await sleep(2200);
+  callStat.textContent='';
+  durPill.style.display='flex';
+  let s=0;
+  const iv=setInterval(()=>{s++;durTxt.textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;},1000);
+  setTimeout(()=>{clearInterval(iv);callOv.classList.remove('show');durPill.style.display='none';callStat.textContent='Calling&#x2026;';},6500);
+}
+
+/* ═══════════════════════════════
+   SCENE 2 — Feed
+═══════════════════════════════ */
+async function scene2(){
+  const fp=$('feed-posts');
+  fp.style.transition='none';fp.style.transform='translateY(0)';
+  /* pop in the new posts */
+  await sleep(800);
+  $('np1').classList.add('popped');
+  await sleep(3500);
+  $('np2').classList.add('popped');
+  await sleep(3000);
+  /* gentle scroll */
+  fp.style.transition='transform 6s linear';
+  fp.style.transform='translateY(-200px)';
+}
+
+/* ═══════════════════════════════
+   SCENE 3 — Chat thread (continues from s1 but standalone)
+═══════════════════════════════ */
+async function scene3(){
+  const msgBox=$('s3-msgs'),callOv=$('s3-call'),callStat=$('s3-call-status'),durPill=$('s3-dur-pill'),durTxt=$('s3-dur-txt');
+  msgBox.innerHTML='';callOv.classList.remove('show');callStat.textContent='Calling…';durPill.style.display='none';
+
+  /* Scene 3 — different chat, showing the encrypted call feature */
+  const MSGS=[
+    {me:false,text:"just posted my new track to the feed btw &#x1F525;",delay:800},
+    {me:true, text:"saw it! already got 40 likes lol",delay:2200},
+    {me:false,text:"this app genuinely goes hard for local stuff",delay:1600},
+    {me:true, text:"call me? wanna talk about the gig Friday",delay:2400},
+    {me:false,text:"yeah give me a sec",delay:1200},
+  ];
+  for(const m of MSGS){
+    await sleep(m.delay);
+    if(!m.me){
+      const tr=document.createElement('div');tr.className='fc-row';
+      tr.innerHTML=`<div class="fc-msg-av" style="padding:0;overflow:hidden;"><img src="../assets/images/icon.png" class="img-av" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div><div class="fc-typing"><span></span><span></span><span></span></div>`;
+      msgBox.appendChild(tr);msgBox.scrollTop=9999;
+      await sleep(900);msgBox.removeChild(tr);
+    }
+    const row=document.createElement('div');row.className='fc-row'+(m.me?' me':'');
+    if(m.me){row.innerHTML=`<div class="fc-bbl me">${m.text}<div class="tick">&#x2713;&#x2713;</div></div>`;}
+    else{row.innerHTML=`<div class="fc-msg-av" style="padding:0;overflow:hidden;"><img src="../assets/images/icon.png" class="img-av" onerror="this.style.display='none';this.parentNode.textContent='&#x1F483;'"></div><div class="fc-bbl them">${m.text}</div>`;}
+    msgBox.appendChild(row);await sleep(16);
+    row.querySelector('.fc-bbl').classList.add('show');msgBox.scrollTop=9999;
+  }
+  await sleep(1800);
+  callOv.classList.add('show');
+  await sleep(2200);
+  callStat.textContent='';durPill.style.display='flex';
+  let s=0;
+  const iv=setInterval(()=>{s++;durTxt.textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;},1000);
+  setTimeout(()=>{clearInterval(iv);callOv.classList.remove('show');durPill.style.display='none';callStat.textContent='Calling…';},6000);
+}
+
+/* ═══════════════════════════════
+   SCENE 4 — Businesses & Talent
+   Real products by Andrew Blewett
+═══════════════════════════════ */
+const BUSINESSES=[
+  {img:'../assets/images/gvoid.png',name:'Game Void',by:'by Andrew Blewett',cat:'GAMES',rating:'4.9',bg:'linear-gradient(135deg,#0a0a1a 0%,#1a0533 50%,#2d1b69 100%)'},
+  {img:'../assets/images/socialvoid.png',name:'Social Void',by:'by Andrew Blewett',cat:'SOCIAL',rating:'5.0',bg:'linear-gradient(135deg,#000d1a 0%,#001f3f 50%,#003366 100%)'},
+  {img:'../assets/images/tt3.png',name:'Tap Tap Three',by:'by Andrew Blewett',cat:'GAMES',rating:'4.8',bg:'linear-gradient(135deg,#1a0a00 0%,#3d1a00 50%,#6b3000 100%)'},
+  {img:'../assets/images/zenvoid.png',name:'Zen Void',by:'by Andrew Blewett',cat:'WELLNESS',rating:'4.9',bg:'linear-gradient(135deg,#001a0d 0%,#003320 50%,#005533 100%)'},
+];
+const TALENT=[
+  {img:'../assets/images/icon.png',name:'Andrew Blewett',by:'Developer',cat:'DEV',rating:'5.0',bg:'linear-gradient(135deg,#0a0a1a 0%,#1a0533 50%,#2d1b69 100%)'},
+  {img:'../assets/images/maddox.jpg',name:'Maddox',by:'VR YouTuber',cat:'CREATOR',rating:'4.9',bg:'linear-gradient(135deg,#001229 0%,#002952 50%,#003d7a 100%)'},
+  {icon:'&#x1F3AC;',name:'Lead The Way',by:'Creator',cat:'CONTENT',rating:'4.8',bg:'linear-gradient(135deg,#1a0000 0%,#3d0000 50%,#660000 100%)'},
+  {icon:'&#x1F3A8;',name:'Mia Creates',by:'Muralist',cat:'ARTIST',rating:'4.9',bg:'linear-gradient(135deg,#1a0a00 0%,#3d1a00 50%,#6b3000 100%)'},
+];
+
+function makeCard(d,delay){
+  const div=document.createElement('div');div.className='sc-card';
+  const imgOrIcon = d.img
+    ? `<img src="${d.img}" class="sc-card-img-photo" onerror="this.style.display='none'">`
+    : `<span style="position:relative;z-index:1;font-size:42px;">${d.icon}</span>`;
+  div.innerHTML=`
+    <div class="sc-card-img" style="background:${d.bg}">
+      ${imgOrIcon}
+      <div class="sc-card-grad"></div>
+      <div class="sc-card-rating">&#x2B50; ${d.rating}</div>
+    </div>
+    <div class="sc-card-info">
+      <div class="sc-card-name">${d.name}</div>
+      <div class="sc-card-by">${d.by}</div>
+      <div class="sc-card-cat">${d.cat}</div>
+    </div>`;
+  setTimeout(()=>div.classList.add('in'),delay);
+  return div;
+}
+
+async function scene4(){
+  const grid=$('sc-grid'),scrollEl=grid.parentElement;
+  grid.innerHTML='';scrollEl.scrollTop=0;
+  $('s4-title').textContent='BUSINESSES';
+  $('s4-search-txt').textContent='Search businesses…';
+
+  const label=document.createElement('div');label.className='sc-grid-label';label.textContent='BY ANDREW BLEWETT';
+  grid.appendChild(label);
+  BUSINESSES.forEach((d,i)=>grid.appendChild(makeCard(d,i*130)));
+
+  await sleep(2400);
+  let pos=0;
+  const iv=setInterval(()=>{pos+=1.4;scrollEl.scrollTop=pos;},16);
+  await sleep(3800);clearInterval(iv);scrollEl.scrollTop=0;
+
+  $('s4-title').textContent='LOCAL TALENT';
+  $('s4-search-txt').textContent='Search talent…';
+  grid.innerHTML='';
+  const label2=document.createElement('div');label2.className='sc-grid-label';label2.textContent='TALENT · BOURNEMOUTH';
+  grid.appendChild(label2);
+  TALENT.forEach((d,i)=>grid.appendChild(makeCard(d,i*120)));
+
+  await sleep(1400);
+  let pos2=0;
+  const iv2=setInterval(()=>{pos2+=1.4;scrollEl.scrollTop=pos2;},16);
+  await sleep(3200);clearInterval(iv2);
+}
+
+/* ═══════════════════════════════
+   SCENE 5 — Towny AI
+   (honest — no false feed claims)
+═══════════════════════════════ */
+async function scene5(){
+  const box=$('s5-msgs'),cta=$('towny-cta');
+  box.innerHTML='';cta.classList.remove('show');
+
+  async function addMsg(side,html,labelText){
+    if(side==='ai'&&labelText){
+      const lbl=document.createElement('div');lbl.className='ai-lbl';lbl.textContent=labelText;
+      box.appendChild(lbl);await sleep(16);lbl.classList.add('show');
+    }
+    const row=document.createElement('div');row.className='trow'+(side==='me'?' me':'');
+    if(side==='ai'){
+      row.innerHTML=`<div class="tav">&#x2728;</div><div class="tbbl ai">${html}</div>`;
+    }else{
+      row.innerHTML=`<div class="tbbl me">${html}</div><div class="tav u">&#x1F60A;</div>`;
+    }
+    box.appendChild(row);await sleep(16);
+    row.querySelector('.tbbl').classList.add('show');
+    box.scrollTop=9999;
+  }
+
+  await sleep(600);
+  await addMsg('me','Hey Towny &#x2014; how do I find local businesses near me?');
+  await sleep(2000);
+  await addMsg('ai','Head to the <span class="hl">Showcases tab</span> &#x2014; it\'s the star icon in the nav bar. You\'ll find local businesses and talent listed there. You can search by name or category. &#x1F4E1;','TOWNY &#xB7; AI ASSISTANT');
+  await sleep(2800);
+  await addMsg('me','nice. can I list my own business on there?');
+  await sleep(2200);
+  await addMsg('ai','Yes &#x2014; tap <span class="hl">"+ List yours"</span> at the top of the Businesses page. It goes through a moderation review before going live to keep the directory legit.','TOWNY &#xB7; AI ASSISTANT');
+  await sleep(2800);
+  await addMsg('me','sick, submitting mine now');
+  await sleep(1800);
+  await addMsg('ai','Love it &#x1F5A4; Your neighbours are waiting.','TOWNY &#xB7; AI ASSISTANT');
+  await sleep(1600);
+  cta.classList.add('show');
+}
+
+/* ═══════════════════════════════
+   RUNNER
+═══════════════════════════════ */
+function runScene(n){
+  if(n===0)scene1();
+  else if(n===1)scene2();
+  else if(n===2)scene3();
+  else if(n===3)scene4();
+  else if(n===4)scene5();
+  else if(n===5)scene6();
+}
+
+/* boot */
+goScene(0);
+scene1();
+
+/* ═══════════════════════════════
+   SCENE 6 — End splash
+═══════════════════════════════ */
+async function scene6(){
+  const sc=document.getElementById('s6');
+  sc.classList.add('active');
+  await sleep(200);
+  document.getElementById('s6-logo').classList.add('show');
+  await sleep(200);
+  document.getElementById('s6-sub').classList.add('show');
+  await sleep(200);
+  document.getElementById('s6-dl').classList.add('show');
+}
+</script>
+</body>
+</html>
